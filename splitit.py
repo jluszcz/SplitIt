@@ -1,32 +1,90 @@
 import collections
 import logging
 import json
+import os
+import uuid
 
 DEFAULT_LOCATION_ID = 0
 
-def _get_check_fname(date, name):
-    return 'database/%s.%s.json' % (date, name)
+_DATABASE_DIR = 'database'
 
-def _get_check(date, name):
-    # TODO This should query the backing database
+# TODO This should query the backing database
+
+def _load_checks():
+    checks = []
+    for fname in os.listdir(_DATABASE_DIR):
+        if '.json' not in fname:
+            continue
+
+        with open(os.path.join(_DATABASE_DIR, fname)) as f:
+            checks.append(json.loads(f.read()))
+
+    logging.debug('Found %d checks', len(checks))
+    return checks
+
+def _load_check(check_id):
     try:
-        with open(_get_check_fname(date, name)) as f:
+        with open(os.path.join(_DATABASE_DIR, '%s.json' % check_id)) as f:
             return json.loads(f.read())
     except IOError:
-        logging.debug('No check found for %s - %s', date, name)
+        logging.debug('No check found for %s', check_id)
         return {}
 
 def _save_check(check):
-    # TODO This should save to the backing database
-    date = check['date']
-    name = check['name']
-
-    logging.debug('Saving %s - %s', date, name)
-    with open(_get_check_fname(date, name), 'w') as f:
+    check_id = check['id']
+    logging.debug('Saving %s', check_id)
+    with open(os.path.join(_DATABASE_DIR, '%s.json' % check_id), 'w') as f:
         f.write(json.dumps(check))
 
+# TODO This should query the backing database
+
+def get_checks(limit, marker):
+    checks = {}
+
+    next_marker = None
+    hit_limit = False
+
+    for check in _load_checks():
+        next_marker = check['id']
+
+        if next_marker <= marker:
+            continue
+
+        check_desc = {
+            'id': check['id'],
+            'description': check['description'],
+            'date': check['date']
+        }
+
+        if 'checks' not in checks:
+            checks['checks'] = []
+        checks['checks'].append(check_desc)
+
+        if len(checks['checks']) == limit:
+            hit_limit = True
+            break
+
+    if hit_limit:
+        checks['marker'] = next_marker
+
+    return checks
+
+def get_check(check_id):
+    return _load_check(check_id)
+
+def put_check(date, description):
+    check = {
+        'id': str(uuid.uuid4()),
+        'date': date,
+        'description': description
+    }
+
+    _save_check(check)
+
+    return check
+
 def create_check(date, name):
-    check = _get_check(date, name)
+    check = _load_check(date, name)
     if check:
         logging.warn('%s - %s already exists', date, name)
         raise ValueError('%s - %s already exists' % (date, name))
@@ -38,9 +96,6 @@ def create_check(date, name):
     _save_check(check)
 
     return check
-
-def get_check(date, name):
-    return _get_check(date, name)
 
 def _get_location_by_name(check, location):
     if 'locations' in check:
@@ -62,7 +117,7 @@ def _get_next_location_id(check):
     return max_id + 1
 
 def update_location(date, name, location, data):
-    check = _get_check(date, name)
+    check = _load_check(date, name)
     if not check:
         return {}
 
@@ -96,7 +151,7 @@ def update_location(date, name, location, data):
     return loc
 
 def get_check_grouped_by_owner(date, name):
-    check = _get_check(date, name)
+    check = _load_check(date, name)
     if not check:
         return {}
 
