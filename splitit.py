@@ -38,6 +38,9 @@ def _save_check(check):
 
 # TODO This should query the backing database
 
+def _create_id():
+    return str(uuid.uuid4())
+
 def get_checks(limit, marker):
     checks = {}
 
@@ -74,81 +77,71 @@ def get_check(check_id):
 
 def put_check(date, description):
     check = {
-        'id': str(uuid.uuid4()),
+        'id': _create_id(),
         'date': date,
-        'description': description
+        'description': description,
+        'locations': [
+            {
+                'id': _create_id(),
+                'name': 'default'
+            }
+        ]
     }
 
     _save_check(check)
 
     return check
 
-def create_check(date, name):
-    check = _load_check(date, name)
-    if check:
-        logging.warn('%s - %s already exists', date, name)
-        raise ValueError('%s - %s already exists' % (date, name))
+def add_location(check, location_name, tax_in_cents, tip_in_cents):
+    location = {
+        'id': _create_id(),
+        'name': location_name
+    }
 
-    check['name'] = name
-    check['date'] = date # TODO Validate dates
-    check['active'] = 1
+    if tax_in_cents:
+        location['tax_in_cents'] = tax_in_cents
+
+    if tip_in_cents:
+        location['tip_in_cents'] = tip_in_cents
+
+    check['locations'].append(location)
+    _save_check(check)
+
+    return check
+
+def update_location(check, location_id, location_name, tax_in_cents, tip_in_cents):
+    for location in check['locations']:
+        if location['id'] == location_id:
+            if location_name:
+                location['name'] = location_name
+
+            if tax_in_cents:
+                location['tax_in_cents'] = tax_in_cents
+            else:
+                location.pop('tax_in_cents', None)
+
+            if tip_in_cents:
+                location['tip_in_cents'] = tip_in_cents
+            else:
+                location.pop('tip_in_cents', None)
+
+            break
 
     _save_check(check)
 
     return check
 
-def _get_location_by_name(check, location):
-    if 'locations' in check:
-        for loc in check['locations']:
-            if not location and loc['id'] == DEFAULT_LOCATION_ID:
-                return loc
-            if loc.get('name') == location:
-                return loc
+def delete_location(check, location_id):
+    locations = []
+    for location in check['locations']:
+        if location['id'] == location_id:
+            continue
+        locations.append(location)
 
-    return None
-
-def _get_next_location_id(check):
-    if 'locations' not in check:
-        return DEFAULT_LOCATION_ID + 1
-
-    max_id = -1
-    for loc in check['locations']:
-        max_id = max(max_id, loc['id'])
-    return max_id + 1
-
-def update_location(date, name, location, data):
-    check = _load_check(date, name)
-    if not check:
-        return {}
-
-    loc = _get_location_by_name(check, location)
-
-    if not loc:
-        # Create the default location if necessary
-        if not location:
-            loc = {
-                'id': DEFAULT_LOCATION_ID
-            }
-        else:
-            loc = {
-                'id': _get_next_location_id(check),
-                'name': location
-            }
-
-        # Store the location in the check
-        if 'locations' not in check:
-            check['locations'] = []
-
-        check['locations'].append(loc)
-
-    if 'tax' in data:
-        loc['tax'] = data['tax']
-    if 'tip' in data:
-        loc['tip'] = data['tip']
-
+    check['locations'] = locations
     _save_check(check)
 
-    return loc
+    return check
 
 def get_check_grouped_by_owner(date, name):
     check = _load_check(date, name)

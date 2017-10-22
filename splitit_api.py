@@ -22,7 +22,6 @@ def describe_checks():
 @app.route('/check/<check_id>')
 def describe_check(check_id):
     check = splitit.get_check(check_id)
-
     if not check:
         flask.abort(404)
 
@@ -43,6 +42,77 @@ def create_check():
         flask.abort(400)
 
     return flask.jsonify(splitit.put_check(date, data['description']))
+
+def _validate_positive_int(data, key):
+    if key in data and (type(data[key]) != int or data[key] < 0):
+        log.warn('Invalid value for %s in %s', key, data)
+        flask.abort(400)
+
+def _validate_location(check, data):
+    if not check:
+        flask.abort(404)
+
+    _validate_positive_int(data, 'tax_in_cents')
+    _validate_positive_int(data, 'tip_in_cents')
+
+@app.route('/check/<check_id>/location', methods=['POST'])
+def create_location(check_id):
+    data = flask.request.get_json()
+
+    check = splitit.get_check(check_id)
+    _validate_location(check, data)
+
+    if 'name' not in data:
+        flask.abort(400)
+
+    for location in check['locations']:
+        if location['name'] == data['name']:
+            flask.abort(409)
+
+    splitit.add_location(check, data['name'], data.get('tax_in_cents'), data.get('tip_in_cents'))
+
+    return flask.jsonify(splitit.get_check(check_id))
+
+@app.route('/check/<check_id>/location/<location_id>', methods=['PUT'])
+def update_location(check_id, location_id):
+    data = flask.request.get_json()
+
+    check = splitit.get_check(check_id)
+    _validate_location(check, data)
+
+    found_location = False
+
+    for location in check['locations']:
+        if location['id'] == location_id:
+            found_location = True
+            break
+
+    if not found_location:
+        flask.abort(404)
+
+    splitit.update_location(check, location_id, data.get('name'), data.get('tax_in_cents'), data.get('tip_in_cents'))
+
+    return flask.jsonify(splitit.get_check(check_id))
+
+@app.route('/check/<check_id>/location/<location_id>', methods=['DELETE'])
+def remove_location(check_id, location_id):
+    check = splitit.get_check(check_id)
+    if not check:
+        flask.abort(404)
+
+    found_location = False
+
+    for location in check['locations']:
+        if location['id'] == location_id:
+            found_location = True
+            break
+
+    if not found_location:
+        flask.abort(404)
+
+    splitit.delete_location(check, location_id)
+
+    return flask.jsonify(splitit.get_check(check_id))
 
 """
 @app.route('/checks/<date>/<name>')
