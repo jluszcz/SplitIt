@@ -1,0 +1,148 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "SplitIt API",
+    "version": "1.0.0"
+  },
+  "schemes": [
+    "https"
+  ],
+  "basePath": "/v1",
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/checks": {
+      "get": {
+        "summary": "Checks",
+        "description": "The Checks endpoint returns information about the checks that SplitIt is aware of.",
+        "responses": {
+          "200": {
+            "description": "An array of CheckDescriptions",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/CheckDescription"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Owner": {
+      "type": "object",
+      "properties": {
+        "owner_id": {
+          "type": "string",
+          "description": "Unique identifier representing a specific line item owner in a given check. For example, \"John Doe\" will have a different owner_id for a check on 2017-10-22 than for a check on 2017-11-22."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the owner."
+        }
+      }
+    },
+    "Location": {
+      "type": "object",
+      "properties": {
+        "location_id": {
+          "type": "string",
+          "description": "Unique identifier representing a specific location in a given check. For example, \"Per Se\" will have a different location_id for a check on 2017-10-22 than for a check on 2017-11-22."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the location."
+        },
+        "tax_amount_in_cents": {
+          "type": "integer",
+          "format": "int32",
+          "minimum": 0,
+          "description": "Amount pad for tax at this location, in cents."
+        },
+        "tip_amount_in_cents": {
+          "type": "integer",
+          "format": "int32",
+          "minimum": 0,
+          "description": "Amount pad for tip at this location, in cents."
+        }
+      }
+    },
+    "LineItem": {
+      "type": "object",
+      "properties": {
+        "line_item_id": {
+          "type": "string",
+          "description": "Unique identifier representing a specific line item."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the line item."
+        },
+        "owner": {
+          "type": "string",
+          "description": "Unique identifier of the owner of this line item."
+        },
+        "location": {
+          "type": "string",
+          "description": "Unique identifier of the location this line item was purchased at"
+        },
+        "amount_in_cents": {
+          "type": "integer",
+          "format": "int32",
+          "minimum": 1,
+          "description": "Amount paid for this line item, in cents, before tax and tip."
+        }
+      }
+    },
+    "CheckDescription": {
+      "type": "object",
+      "properties": {
+        "check_id": {
+          "type": "string",
+          "description": "Unique identifier representing this check."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description for this check, i.e., \"TGIFriday's\", \"Per Se\", etc."
+        },
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "Date this check was paid for."
+        }
+      }
+    },
+    "Check": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/CheckDescription"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "owners": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Owner"
+              }
+            },
+            "locations": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Location"
+              }
+            },
+            "line_items": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/LineItem"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

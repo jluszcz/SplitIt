@@ -1,0 +1,10 @@
+export FLASK_DEBUG=1
+export FLASK_APP=splitit_api.py
+flask run
+
+http PUT http://127.0.0.1:5000/checks/20170714/FridayDrinks
+http GET http://127.0.0.1:5000/checks/20170714/FridayDrinks/locations
+http --json POST http://127.0.0.1:5000/checks/20170714/FridayDrinks/location/LiquidArtHouse <<< '{"tax": 350, "tip": 1000}'
+http --json POST http://127.0.0.1:5000/checks/20170714/FridayDrinks/location/Tico <<< '{"tax": 1064, "tip": 3200}'
+http --json POST http://127.0.0.1:5000/checks/20170714/FridayDrinks/location/Yvonnes <<< '{}'
+http GET http://127.0.0.1:5000/checks/20170714/FridayDrinks
