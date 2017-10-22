@@ -55,6 +55,17 @@ def _validate_location(check, data):
     _validate_positive_int(data, 'tax_in_cents')
     _validate_positive_int(data, 'tip_in_cents')
 
+def _validate_location_exists(check, location_id):
+    found_location = False
+
+    for location in check['locations']:
+        if location['id'] == location_id:
+            found_location = True
+            break
+
+    if not found_location:
+        flask.abort(404)
+
 @app.route('/check/<check_id>/location', methods=['POST'])
 def create_location(check_id):
     data = flask.request.get_json()
@@ -80,15 +91,7 @@ def update_location(check_id, location_id):
     check = splitit.get_check(check_id)
     _validate_location(check, data)
 
-    found_location = False
-
-    for location in check['locations']:
-        if location['id'] == location_id:
-            found_location = True
-            break
-
-    if not found_location:
-        flask.abort(404)
+    _validate_location_exists(check, location_id)
 
     splitit.update_location(check, location_id, data.get('name'), data.get('tax_in_cents'), data.get('tip_in_cents'))
 
@@ -100,15 +103,7 @@ def remove_location(check_id, location_id):
     if not check:
         flask.abort(404)
 
-    found_location = False
-
-    for location in check['locations']:
-        if location['id'] == location_id:
-            found_location = True
-            break
-
-    if not found_location:
-        flask.abort(404)
+    _validate_location_exists(check, location_id)
 
     splitit.delete_location(check, location_id)
 
