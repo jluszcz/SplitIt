@@ -4,7 +4,7 @@ import json
 import os
 import uuid
 
-DEFAULT_LOCATION_ID = 0
+DEFAULT_LOCATION_NAME = 'default'
 
 _DATABASE_DIR = 'database'
 
@@ -80,19 +80,16 @@ def put_check(date, description):
         'id': _create_id(),
         'date': date,
         'description': description,
-        'locations': [
-            {
-                'id': _create_id(),
-                'name': 'default'
-            }
-        ]
+        'locations': []
     }
+
+    add_location(check, DEFAULT_LOCATION_NAME)
 
     _save_check(check)
 
     return check
 
-def add_location(check, location_name, tax_in_cents, tip_in_cents):
+def add_location(check, location_name, tax_in_cents=None, tip_in_cents=None):
     location = {
         'id': _create_id(),
         'name': location_name
@@ -109,7 +106,7 @@ def add_location(check, location_name, tax_in_cents, tip_in_cents):
 
     return check
 
-def update_location(check, location_id, location_name, tax_in_cents, tip_in_cents):
+def update_location(check, location_id, location_name=None, tax_in_cents=None, tip_in_cents=None):
     for location in check['locations']:
         if location['id'] == location_id:
             if location_name:
