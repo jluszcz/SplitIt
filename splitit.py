@@ -2,7 +2,12 @@ import collections
 import logging
 import json
 import os
+import re
 import uuid
+
+from splitit_errors import ConflictError, BadRequestError, NotFoundError
+
+DATE_RE = re.compile('^\d{4}-\d{2}-\d{2}$')
 
 DEFAULT_LOCATION_NAME = 'default'
 
@@ -27,8 +32,7 @@ def _load_check(check_id):
         with open(os.path.join(_DATABASE_DIR, '%s.json' % check_id)) as f:
             return json.loads(f.read())
     except IOError:
-        logging.debug('No check found for %s', check_id)
-        return {}
+        raise NotFoundError('No check found for ID: %s', check_id)
 
 def _save_check(check):
     check_id = check['id']
@@ -76,6 +80,12 @@ def get_check(check_id):
     return _load_check(check_id)
 
 def put_check(date, description):
+    if not date or not DATE_RE.match(date):
+        raise BadRequestError('Invalid date: %s' % date)
+
+    if not description:
+        raise BadRequestError('Invalid description: %s' % description)
+
     check = {
         'id': _create_id(),
         'date': date,
@@ -89,7 +99,24 @@ def put_check(date, description):
 
     return check
 
+def _validate_tax_in_cents(tax_in_cents):
+    if tax_in_cents and tax_in_cents < 0:
+        raise BadRequestError('Invalid tax_in_cents: %d' % tax_in_cents)
+
+def _validate_tip_in_cents(tip_in_cents):
+    if tip_in_cents and tip_in_cents < 0:
+        raise BadRequestError('Invalid tip_in_cents: %d' % tip_in_cents)
+
 def add_location(check, location_name, tax_in_cents=None, tip_in_cents=None):
+    if not location_name:
+        raise BadRequestError('Missing location name')
+    _validate_tax_in_cents(tax_in_cents)
+    _validate_tip_in_cents(tip_in_cents)
+
+    for location in check['locations']:
+        if location['name'] == location_name:
+            raise ConflictError('A location with the name %s already exists' % location_name)
+
     location = {
         'id': _create_id(),
         'name': location_name
@@ -107,6 +134,11 @@ def add_location(check, location_name, tax_in_cents=None, tip_in_cents=None):
     return check
 
 def update_location(check, location_id, location_name=None, tax_in_cents=None, tip_in_cents=None):
+    _validate_tax_in_cents(tax_in_cents)
+    _validate_tip_in_cents(tip_in_cents)
+
+    location_found = False
+
     for location in check['locations']:
         if location['id'] == location_id:
             if location_name:
@@ -122,7 +154,11 @@ def update_location(check, location_id, location_name=None, tax_in_cents=None, t
             else:
                 location.pop('tip_in_cents', None)
 
+            location_found = True
             break
+
+    if not location_found:
+        raise NotFoundError('No location found for ID: %s', location_id)
 
     _save_check(check)
 
@@ -134,6 +170,9 @@ def delete_location(check, location_id):
         if location['id'] == location_id:
             continue
         locations.append(location)
+
+    if len(locations) == len(check['locations']):
+        raise NotFoundError('No location found for ID: %s', location_id)
 
     check['locations'] = locations
     _save_check(check)
