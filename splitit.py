@@ -7,11 +7,13 @@ import uuid
 
 from splitit_errors import ConflictError, BadRequestError, NotFoundError
 
+_DATABASE_DIR = 'database'
+
 DATE_RE = re.compile('^\d{4}-\d{2}-\d{2}$')
 
 DEFAULT_LOCATION_NAME = 'default'
 
-_DATABASE_DIR = 'database'
+_DEFAULT_QUERY_LIMIT = 25
 
 # TODO This should query the backing database
 
@@ -25,14 +27,15 @@ def _load_checks():
             checks.append(json.loads(f.read()))
 
     logging.debug('Found %d checks', len(checks))
-    return checks
+
+    return sorted(checks, key=lambda c: c.get('id'))
 
 def _load_check(check_id):
     try:
         with open(os.path.join(_DATABASE_DIR, '%s.json' % check_id)) as f:
             return json.loads(f.read())
     except IOError:
-        raise NotFoundError('No check found for ID: %s', check_id)
+        raise NotFoundError('No check found for ID: %s' % check_id)
 
 def _save_check(check):
     check_id = check['id']
@@ -40,13 +43,25 @@ def _save_check(check):
     with open(os.path.join(_DATABASE_DIR, '%s.json' % check_id), 'w') as f:
         f.write(json.dumps(check))
 
+def _delete_check(check_id):
+    fname = os.path.join(_DATABASE_DIR, '%s.json' % check_id)
+    if os.path.exists(fname):
+        os.remove(fname)
+    else:
+        raise NotFoundError('No check found for ID: %s' % check_id)
+
 # TODO This should query the backing database
 
 def _create_id():
     return str(uuid.uuid4())
 
-def get_checks(limit, marker):
-    checks = {}
+def get_checks(limit=None, marker=None):
+
+    limit = limit or _DEFAULT_QUERY_LIMIT
+
+    checks = {
+        'checks': []
+    }
 
     next_marker = None
     hit_limit = False
@@ -63,8 +78,6 @@ def get_checks(limit, marker):
             'date': check['date']
         }
 
-        if 'checks' not in checks:
-            checks['checks'] = []
         checks['checks'].append(check_desc)
 
         if len(checks['checks']) == limit:
@@ -98,6 +111,9 @@ def put_check(date, description):
     _save_check(check)
 
     return check
+
+def remove_check(check_id):
+    _delete_check(check_id)
 
 def _validate_tax_in_cents(tax_in_cents):
     if tax_in_cents and tax_in_cents < 0:
@@ -158,7 +174,7 @@ def update_location(check, location_id, location_name=None, tax_in_cents=None, t
             break
 
     if not location_found:
-        raise NotFoundError('No location found for ID: %s', location_id)
+        raise NotFoundError('No location found for ID: %s' % location_id)
 
     _save_check(check)
 
@@ -172,13 +188,17 @@ def delete_location(check, location_id):
         locations.append(location)
 
     if len(locations) == len(check['locations']):
-        raise NotFoundError('No location found for ID: %s', location_id)
+        raise NotFoundError('No location found for ID: %s' % location_id)
+
+    if not locations:
+        raise BadRequestError('Cannot remove all locations from check: %s' % check['id'])
 
     check['locations'] = locations
     _save_check(check)
 
     return check
 
+# TODO This was implemented for a past model version, needs updating
 def get_check_grouped_by_owner(date, name):
     check = _load_check(date, name)
     if not check:

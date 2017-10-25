@@ -7,16 +7,11 @@ logging.basicConfig(level=logging.DEBUG)
 
 app = flask.Flask(__name__)
 
-DEFAULT_QUERY_LIMIT = 25
-
 @app.route('/checks')
 def describe_checks():
     data = flask.request.get_json()
 
-    marker = data.get('marker')
-    query_limit = data.get('limit', DEFAULT_QUERY_LIMIT)
-
-    return flask.jsonify(splitit.get_checks(limit=query_limit, marker=marker))
+    return flask.jsonify(splitit.get_checks(limit=data.get('limit'), marker=data.get('marker')))
 
 @app.route('/check/<check_id>')
 def describe_check(check_id):
