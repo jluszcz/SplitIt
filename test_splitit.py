@@ -126,8 +126,8 @@ class TestSplitIt(unittest.TestCase):
 
         new_location = locations[-1]
         self.assertEquals(loc_name, new_location['name'])
-        self.assertEquals(tax, new_location['tax_in_cents'])
-        self.assertEquals(tip, new_location['tip_in_cents'])
+        self.assertEquals(tax, new_location['taxInCents'])
+        self.assertEquals(tip, new_location['tipInCents'])
 
     def test_add_location_no_name(self):
         check = self._create_check()
@@ -175,14 +175,14 @@ class TestSplitIt(unittest.TestCase):
         location = check['locations'][-1]
 
         orig_id = location['id']
-        orig_tip = location.get('tip_in_cents')
+        orig_tip = location.get('tipInCents')
         new_tip = 105
 
         check = splitit.update_location(check, orig_id, tip_in_cents=new_tip)
         location = check['locations'][-1]
 
-        self.assertNotEquals(orig_tip, location['tip_in_cents'])
-        self.assertEquals(new_tip, location['tip_in_cents'])
+        self.assertNotEquals(orig_tip, location['tipInCents'])
+        self.assertEquals(new_tip, location['tipInCents'])
 
         check = splitit.update_location(check, orig_id)
         location = check['locations'][-1]
@@ -195,14 +195,14 @@ class TestSplitIt(unittest.TestCase):
         location = check['locations'][-1]
 
         orig_id = location['id']
-        orig_tax = location.get('tax_in_cents')
+        orig_tax = location.get('taxInCents')
         new_tax = 105
 
         check = splitit.update_location(check, orig_id, tax_in_cents=new_tax)
         location = check['locations'][-1]
 
-        self.assertNotEquals(orig_tax, location['tax_in_cents'])
-        self.assertEquals(new_tax, location['tax_in_cents'])
+        self.assertNotEquals(orig_tax, location['taxInCents'])
+        self.assertEquals(new_tax, location['taxInCents'])
 
         check = splitit.update_location(check, orig_id)
         location = check['locations'][-1]

@@ -9,11 +9,11 @@ from splitit_errors import ConflictError, BadRequestError, NotFoundError
 
 _DATABASE_DIR = 'database'
 
-DATE_RE = re.compile('^\d{4}-\d{2}-\d{2}$')
-
-DEFAULT_LOCATION_NAME = 'default'
+_DATE_RE = re.compile('^\d{4}-\d{2}-\d{2}$')
 
 _DEFAULT_QUERY_LIMIT = 25
+
+DEFAULT_LOCATION_NAME = 'default'
 
 # TODO This should query the backing database
 
@@ -93,7 +93,7 @@ def get_check(check_id):
     return _load_check(check_id)
 
 def put_check(date, description):
-    if not date or not DATE_RE.match(date):
+    if not date or not _DATE_RE.match(date):
         raise BadRequestError('Invalid date: %s' % date)
 
     if not description:
@@ -139,10 +139,10 @@ def add_location(check, location_name, tax_in_cents=None, tip_in_cents=None):
     }
 
     if tax_in_cents:
-        location['tax_in_cents'] = tax_in_cents
+        location['taxInCents'] = tax_in_cents
 
     if tip_in_cents:
-        location['tip_in_cents'] = tip_in_cents
+        location['tipInCents'] = tip_in_cents
 
     check['locations'].append(location)
     _save_check(check)
@@ -161,14 +161,14 @@ def update_location(check, location_id, location_name=None, tax_in_cents=None, t
                 location['name'] = location_name
 
             if tax_in_cents:
-                location['tax_in_cents'] = tax_in_cents
+                location['taxInCents'] = tax_in_cents
             else:
-                location.pop('tax_in_cents', None)
+                location.pop('taxInCents', None)
 
             if tip_in_cents:
-                location['tip_in_cents'] = tip_in_cents
+                location['tipInCents'] = tip_in_cents
             else:
-                location.pop('tip_in_cents', None)
+                location.pop('tipInCents', None)
 
             location_found = True
             break
@@ -197,6 +197,18 @@ def delete_location(check, location_id):
     _save_check(check)
 
     return check
+
+def add_line_item(check, name, location_id=None, owner=None, amount_in_cents=None):
+    pass
+
+def update_line_item(check, line_item_id, name=None, location_id=None, owner=None, amount_in_cents=None):
+    pass
+
+def split_line_item(check, line_item_id, split_ct):
+    pass
+
+def remove_line_item(check, line_item_id):
+    pass
 
 # TODO This was implemented for a past model version, needs updating
 def get_check_grouped_by_owner(date, name):
