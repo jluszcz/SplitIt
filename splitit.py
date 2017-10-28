@@ -116,12 +116,12 @@ def remove_check(check_id):
     _delete_check(check_id)
 
 def _validate_tax_in_cents(tax_in_cents):
-    if tax_in_cents and tax_in_cents < 0:
-        raise BadRequestError('Invalid tax_in_cents: %d' % tax_in_cents)
+    if tax_in_cents and (type(tax_in_cents) != int or tax_in_cents < 0):
+        raise BadRequestError('Invalid tax: %s' % str(tax_in_cents))
 
 def _validate_tip_in_cents(tip_in_cents):
-    if tip_in_cents and tip_in_cents < 0:
-        raise BadRequestError('Invalid tip_in_cents: %d' % tip_in_cents)
+    if tip_in_cents and (type(tip_in_cents) != int or tip_in_cents < 0):
+        raise BadRequestError('Invalid tip: %s' % str(tip_in_cents))
 
 def add_location(check, location_name, tax_in_cents=None, tip_in_cents=None):
     if not location_name:
@@ -198,8 +198,52 @@ def delete_location(check, location_id):
 
     return check
 
+def _validate_amount_in_cents(amount_in_cents):
+    if amount_in_cents and (type(amount_in_cents) != int or amount_in_cents < 0):
+        raise BadRequestError('Invalid amount: %s' % str(amount_in_cents))
+
+def _get_location(check, location_id):
+    if not location_id:
+        if len(check['locations']) == 1:
+            return check['locations'][0]
+        else:
+            for location in check['locations']:
+                if location['name'] == DEFAULT_LOCATION_NAME:
+                    return location
+    else:
+        for location in check['locations']:
+            if location['id'] == location_id:
+                return location
+
+    raise BadRequestError('Could not determine location')
+
 def add_line_item(check, name, location_id=None, owner=None, amount_in_cents=None):
-    pass
+    if not name:
+        raise BadRequestError('Missing Line Item Name')
+
+    location = _get_location(check, location_id)
+
+    _validate_amount_in_cents(amount_in_cents)
+
+    line_item = {
+        'id': _create_id(),
+        'name': name,
+        'locationId': location['id'],
+    }
+
+    if amount_in_cents:
+        line_item['amountInCents'] = amount_in_cents
+
+    if owner:
+        line_item['owner'] = owner
+
+    if 'lineItems' not in check:
+        check['lineItems'] = []
+
+    check['lineItems'].append(line_item)
+    _save_check(check)
+
+    return check
 
 def update_line_item(check, line_item_id, name=None, location_id=None, owner=None, amount_in_cents=None):
     pass
@@ -211,32 +255,32 @@ def remove_line_item(check, line_item_id):
     pass
 
 # TODO This was implemented for a past model version, needs updating
-def get_check_grouped_by_owner(date, name):
-    check = _load_check(date, name)
-    if not check:
-        return {}
-
-    locations_by_id = {}
-    for location in check['locations']:
-        loc_id = location['id']
-
-        locations_by_id[loc_id] = location
-
-        loc_total = 0
-
-        for line_item in check['line_items']:
-            if loc_id != line_item.get('location_id', DEFAULT_LOCATION_ID):
-                continue
-
-            loc_total += line_item['amount']
-
-        location['tip_multiplier'] = float(location['tip']) / loc_total
-        location['tax_multiplier'] = float(location['tax']) / loc_total
-
-    by_owner = collections.Counter()
-
-    for line_item in check['line_items']:
-        location = locations_by_id[line_item.get('location_id', DEFAULT_LOCATION_ID)]
-        by_owner[line_item['owner']] += int(round((1 + location['tip_multiplier'] + location['tax_multiplier']) * line_item['amount']))
-
-    return by_owner
+# def get_check_grouped_by_owner(date, name):
+#     check = _load_check(date, name)
+#     if not check:
+#         return {}
+#
+#     locations_by_id = {}
+#     for location in check['locations']:
+#         loc_id = location['id']
+#
+#         locations_by_id[loc_id] = location
+#
+#         loc_total = 0
+#
+#         for line_item in check['line_items']:
+#             if loc_id != line_item.get('location_id', DEFAULT_LOCATION_ID):
+#                 continue
+#
+#             loc_total += line_item['amount']
+#
+#         location['tip_multiplier'] = float(location['tip']) / loc_total
+#         location['tax_multiplier'] = float(location['tax']) / loc_total
+#
+#     by_owner = collections.Counter()
+#
+#     for line_item in check['line_items']:
+#         location = locations_by_id[line_item.get('location_id', DEFAULT_LOCATION_ID)]
+#         by_owner[line_item['owner']] += int(round((1 + location['tip_multiplier'] + location['tax_multiplier']) * line_item['amount']))
+#
+#     return by_owner

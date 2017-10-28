@@ -135,17 +135,29 @@ class TestSplitIt(unittest.TestCase):
         with self.assertRaises(BadRequestError):
             splitit.add_location(check, None)
 
-    def test_add_location_bad_tax(self):
+    def test_add_location_bad_tax_1(self):
         check = self._create_check()
 
         with self.assertRaises(BadRequestError):
             splitit.add_location(check, 'New Location', tax_in_cents=-1)
 
-    def test_add_location_bad_tip(self):
+    def test_add_location_bad_tax_2(self):
+        check = self._create_check()
+
+        with self.assertRaises(BadRequestError):
+            splitit.add_location(check, 'New Location', tax_in_cents='not a number')
+
+    def test_add_location_bad_tip_1(self):
         check = self._create_check()
 
         with self.assertRaises(BadRequestError):
             splitit.add_location(check, 'New Location', tip_in_cents=-1)
+
+    def test_add_location_bad_tip_2(self):
+        check = self._create_check()
+
+        with self.assertRaises(BadRequestError):
+            splitit.add_location(check, 'New Location', tip_in_cents='not a number')
 
     def test_add_location_with_conflicting_name(self):
         check = self._create_check()
@@ -238,3 +250,103 @@ class TestSplitIt(unittest.TestCase):
 
         with self.assertRaises(BadRequestError):
             splitit.delete_location(check, check['locations'][-1]['id'])
+
+    def test_add_line_item_to_default_location(self):
+        check = self._create_check()
+        check = self._create_location(check)
+
+        for location in check['locations']:
+            if location['name'] == splitit.DEFAULT_LOCATION_NAME:
+                location_id = location['id']
+
+        self.assertFalse('lineItems' in check)
+
+        line_item_name = 'Food'
+        line_item_owner = 'John Doe'
+        line_item_amt = 105
+
+        check = splitit.add_line_item(check, name=line_item_name, owner=line_item_owner, amount_in_cents=line_item_amt)
+
+        self.assertEquals(1, len(check['lineItems']))
+
+        line_item = check['lineItems'][-1]
+
+        self.assertEquals(location_id, line_item['locationId'])
+        self.assertEquals(line_item_name, line_item['name'])
+        self.assertEquals(line_item_owner, line_item['owner'])
+        self.assertEquals(line_item_amt, line_item['amountInCents'])
+
+    def test_add_line_item_to_non_default_location(self):
+        check = self._create_check()
+        check = self._create_location(check)
+
+        for location in check['locations']:
+            if location['name'] != splitit.DEFAULT_LOCATION_NAME:
+                location_id = location['id']
+
+        self.assertFalse('lineItems' in check)
+
+        line_item_name = 'Food'
+        line_item_owner = 'John Doe'
+        line_item_amt = 105
+
+        check = splitit.add_line_item(check, name=line_item_name, location_id=location_id, owner=line_item_owner, amount_in_cents=line_item_amt)
+
+        self.assertEquals(1, len(check['lineItems']))
+
+        line_item = check['lineItems'][-1]
+
+        self.assertEquals(location_id, line_item['locationId'])
+        self.assertEquals(line_item_name, line_item['name'])
+        self.assertEquals(line_item_owner, line_item['owner'])
+        self.assertEquals(line_item_amt, line_item['amountInCents'])
+
+    def test_add_line_item_to_only_non_default_location(self):
+        check = self._create_check()
+        check = self._create_location(check)
+
+        for location in check['locations']:
+            if location['name'] == splitit.DEFAULT_LOCATION_NAME:
+                default_location_id = location['id']
+            else:
+                location_id = location['id']
+
+        check = splitit.delete_location(check, default_location_id)
+
+        self.assertFalse('lineItems' in check)
+
+        line_item_name = 'Food'
+        line_item_owner = 'John Doe'
+        line_item_amt = 105
+
+        check = splitit.add_line_item(check, name=line_item_name, owner=line_item_owner, amount_in_cents=line_item_amt)
+
+        self.assertEquals(1, len(check['lineItems']))
+
+        line_item = check['lineItems'][-1]
+
+        self.assertEquals(location_id, line_item['locationId'])
+        self.assertEquals(line_item_name, line_item['name'])
+        self.assertEquals(line_item_owner, line_item['owner'])
+        self.assertEquals(line_item_amt, line_item['amountInCents'])
+
+    def test_add_line_item_no_name(self):
+        check = self._create_check()
+
+        with self.assertRaises(BadRequestError):
+            splitit.add_line_item(check, name=None)
+
+    def test_add_line_item_bad_amount_1(self):
+        check = self._create_check()
+
+        with self.assertRaises(BadRequestError):
+            splitit.add_line_item(check, 'Food', amount_in_cents=-1)
+
+    def test_add_line_item_bad_amount_2(self):
+        check = self._create_check()
+
+        with self.assertRaises(BadRequestError):
+            splitit.add_line_item(check, 'Food', amount_in_cents='not a number')
+
+    def test_add_line_item_to_only_non_default_location(self):
+        pass
