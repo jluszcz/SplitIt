@@ -217,9 +217,9 @@ def _get_location(check, location_id):
 
     raise BadRequestError('Could not determine location')
 
-def add_line_item(check, name, location_id=None, owner=None, amount_in_cents=None):
+def add_line_item(check, name, location_id=None, owner=None, amount_in_cents=None, save_check=True):
     if not name:
-        raise BadRequestError('Missing Line Item Name')
+        raise BadRequestError('Missing line item name')
 
     location = _get_location(check, location_id)
 
@@ -241,18 +241,81 @@ def add_line_item(check, name, location_id=None, owner=None, amount_in_cents=Non
         check['lineItems'] = []
 
     check['lineItems'].append(line_item)
+
+    if save_check:
+        _save_check(check)
+
+    return check
+
+def _get_line_item(check, line_item_id):
+    for line_item in check.get('lineItems', []):
+        if line_item_id == line_item['id']:
+            return line_item
+    raise NotFoundError('No line item found for ID: %s' % line_item_id)
+
+def update_line_item(check, line_item_id, name=None, location_id=None, owner=None, amount_in_cents=None):
+    line_item = _get_line_item(check, line_item_id)
+
+    if name:
+        line_item['name'] = name
+    else:
+        raise BadRequestError('Missing line item name')
+
+    if location_id:
+        line_item['locationId'] = location_id
+    else:
+        raise BadRequestError('Missing line item location')
+
+    if owner:
+        line_item['owner'] = owner
+    else:
+        line_item.pop('owner', None)
+
+    if amount_in_cents:
+        line_item['amountInCents'] = amount_in_cents
+    else:
+        line_item.pop('amountInCents', None)
+
     _save_check(check)
 
     return check
 
-def update_line_item(check, line_item_id, name=None, location_id=None, owner=None, amount_in_cents=None):
-    pass
-
 def split_line_item(check, line_item_id, split_ct):
-    pass
+    if type(split_ct) != int or split_ct < 1:
+        raise BadRequestError('Invalid split count: %s' % str(split_ct))
+
+    line_item = _get_line_item(check, line_item_id)
+
+    new_amount = int(line_item.get('amountInCents', 0) / split_ct)
+
+    line_item['amountInCents'] = new_amount
+
+    for n in range(split_ct - 1):
+        add_line_item(check, line_item['name'], line_item['locationId'], line_item.get('owner'), new_amount, save_check=False)
+
+    _save_check(check)
+
+    return check
 
 def remove_line_item(check, line_item_id):
-    pass
+    line_items = []
+    orig_line_items = check.get('lineItems', [])
+    for line_item in orig_line_items:
+        if line_item['id'] == line_item_id:
+            continue
+        line_items.append(line_item)
+
+    if len(line_items) == len(orig_line_items):
+        raise NotFoundError('No line item found for ID: %s' % line_item_id)
+
+    if line_items:
+        check['lineItems'] = line_items
+    else:
+        check.pop('lineItems', None)
+
+    _save_check(check)
+
+    return check
 
 # TODO This was implemented for a past model version, needs updating
 # def get_check_grouped_by_owner(date, name):

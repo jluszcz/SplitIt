@@ -1,3 +1,4 @@
+import copy
 import datetime
 import splitit
 import unittest
@@ -221,11 +222,11 @@ class TestSplitIt(unittest.TestCase):
 
         self.assertIsNone(location.get('tax_in_cents'))
 
-    def test_update_nonexistent_location(self):
+    def test_update_location_not_found(self):
         check = self._create_check()
 
         with self.assertRaises(NotFoundError):
-            splitit.update_location(check, 'not-an-id')
+            splitit.update_location(check, 'bad_id')
 
     def test_delete_location(self):
         check = self._create_check()
@@ -237,11 +238,11 @@ class TestSplitIt(unittest.TestCase):
 
         self.assertEquals(1, len(check['locations']))
 
-    def test_delete_nonexistent_location(self):
+    def test_delete_location_not_found(self):
         check = self._create_check()
 
         with self.assertRaises(NotFoundError):
-            splitit.delete_location(check, 'not-an-id')
+            splitit.delete_location(check, 'bad_id')
 
     def test_delete_all_locations(self):
         check = self._create_check()
@@ -348,5 +349,183 @@ class TestSplitIt(unittest.TestCase):
         with self.assertRaises(BadRequestError):
             splitit.add_line_item(check, 'Food', amount_in_cents='not a number')
 
-    def test_add_line_item_to_only_non_default_location(self):
-        pass
+    def test_update_line_item_name(self):
+        check = self._create_check()
+
+        name = 'Food'
+        check = splitit.add_line_item(check, name)
+
+        orig_li = copy.deepcopy(check['lineItems'][-1])
+
+        new_name = 'Not Food'
+        check = splitit.update_line_item(check, orig_li['id'], new_name, orig_li['locationId'])
+
+        li = check['lineItems'][-1]
+
+        self.assertEquals(new_name, li['name'])
+        self.assertEquals(orig_li['id'], li['id'])
+        self.assertEquals(orig_li['locationId'], li['locationId'])
+
+    def test_update_line_item_add_remove_owner(self):
+        check = self._create_check()
+
+        check = splitit.add_line_item(check, 'Food', owner='Owner')
+
+        orig_li = copy.deepcopy(check['lineItems'][-1])
+
+        new_owner = 'New Owner'
+
+        check = splitit.update_line_item(check, orig_li['id'], orig_li['name'], orig_li['locationId'], owner=new_owner)
+
+        li = check['lineItems'][-1]
+
+        self.assertEquals(orig_li['id'], li['id'])
+        self.assertEquals(new_owner, li['owner'])
+
+        check = splitit.update_line_item(check, orig_li['id'], orig_li['name'], orig_li['locationId'], owner=None)
+
+        li = check['lineItems'][-1]
+
+        self.assertEquals(orig_li['id'], li['id'])
+        self.assertIsNone(li.get('owner'))
+
+    def test_update_line_item_add_remove_amount(self):
+        check = self._create_check()
+
+        check = splitit.add_line_item(check, 'Food', amount_in_cents=105)
+
+        orig_li = copy.deepcopy(check['lineItems'][-1])
+
+        new_amt = 30
+
+        check = splitit.update_line_item(check, orig_li['id'], orig_li['name'], orig_li['locationId'], amount_in_cents=new_amt)
+
+        li = check['lineItems'][-1]
+
+        self.assertEquals(orig_li['id'], li['id'])
+        self.assertEquals(new_amt, li['amountInCents'])
+
+        check = splitit.update_line_item(check, orig_li['id'], orig_li['name'], orig_li['locationId'], amount_in_cents=None)
+
+        li = check['lineItems'][-1]
+
+        self.assertEquals(orig_li['id'], li['id'])
+        self.assertIsNone(li.get('amountInCents'))
+
+    def test_update_line_item_not_found(self):
+        check = self._create_check()
+
+        with self.assertRaises(NotFoundError):
+            splitit.update_line_item(check, 'bad_id')
+
+    def test_update_line_item_no_name(self):
+        check = self._create_check()
+
+        check = splitit.add_line_item(check, 'Food')
+
+        li = check['lineItems'][-1]
+
+        with self.assertRaises(BadRequestError):
+            splitit.update_line_item(check, li['id'], name=None, location_id=li['locationId'])
+
+    def test_update_line_item_no_location(self):
+        check = self._create_check()
+
+        check = splitit.add_line_item(check, 'Food')
+
+        li = check['lineItems'][-1]
+
+        with self.assertRaises(BadRequestError):
+            splitit.update_line_item(check, li['id'], name=li['name'], location_id=None)
+
+    def test_remove_line_item(self):
+        check = self._create_check()
+
+        check = splitit.add_line_item(check, 'Food')
+        check = splitit.add_line_item(check, 'Drink')
+
+        self.assertEquals(2, len(check['lineItems']))
+
+        li = check['lineItems'][-1]
+
+        check = splitit.remove_line_item(check, li['id'])
+
+        self.assertEquals(1, len(check['lineItems']))
+
+        for l in check['lineItems']:
+            self.assertNotEquals(li['id'], l['id'])
+
+    def test_remove_only_line_item(self):
+        check = self._create_check()
+
+        check = splitit.add_line_item(check, 'Food')
+
+        li = check['lineItems'][-1]
+
+        check = splitit.remove_line_item(check, li['id'])
+
+        self.assertIsNone(check.get('lineItems'))
+
+    def test_remove_line_item_not_found(self):
+        check = self._create_check()
+
+        with self.assertRaises(NotFoundError):
+            splitit.remove_line_item(check, 'bad_id')
+
+    def test_split_line_item(self):
+        check = self._create_check()
+
+        line_item_name = 'Food'
+        line_item_owner = 'John Doe'
+        line_item_amt = 200
+
+        check = splitit.add_line_item(check, name=line_item_name, owner=line_item_owner, amount_in_cents=line_item_amt)
+
+        self.assertEquals(1, len(check['lineItems']))
+
+        line_item = copy.deepcopy(check['lineItems'][-1])
+
+        check = splitit.split_line_item(check, line_item['id'], 1)
+
+        self.assertEquals(1, len(check['lineItems']))
+
+        updated_line_item = check['lineItems'][-1]
+
+        self.assertEquals(line_item['id'], updated_line_item['id'])
+        self.assertEquals(line_item['locationId'], updated_line_item['locationId'])
+        self.assertEquals(line_item['name'], updated_line_item['name'])
+        self.assertEquals(line_item['owner'], updated_line_item['owner'])
+        self.assertEquals(line_item['amountInCents'], updated_line_item['amountInCents'])
+
+        split_ct = 3
+        check = splitit.split_line_item(check, line_item['id'], split_ct)
+
+        self.assertEquals(split_ct, len(check['lineItems']))
+
+        found_orig = False
+        not_orig_ct = 0
+
+        for li in check['lineItems']:
+            if line_item['id'] == li['id']:
+                found_orig = True
+            else:
+                not_orig_ct += 1
+
+            self.assertEquals(line_item['name'], updated_line_item['name'])
+            self.assertEquals(line_item['owner'], updated_line_item['owner'])
+            self.assertEquals(line_item['amountInCents'] / split_ct, updated_line_item['amountInCents'])
+
+        self.assertTrue(found_orig)
+        self.assertEquals(split_ct - 1, not_orig_ct)
+
+    def test_split_line_item_bad_count_1(self):
+        check = self._create_check()
+
+        with self.assertRaises(BadRequestError):
+            splitit.split_line_item(check, 'id', 0)
+
+    def test_split_line_item_bad_count_2(self):
+        check = self._create_check()
+
+        with self.assertRaises(BadRequestError):
+            splitit.split_line_item(check, 'id', '0')
