@@ -61,7 +61,7 @@ def create_line_item(check_id):
 
     return flask.jsonify(check)
 
-@app.route('check/<check_id>/line-item/<line_item_id>', methods=['PUT'])
+@app.route('/check/<check_id>/line-item/<line_item_id>', methods=['PUT'])
 def update_line_item(check_id, line_item_id):
     data = flask.request.get_json()
 
@@ -71,17 +71,23 @@ def update_line_item(check_id, line_item_id):
 
     split_ct = data.get('splitCount', 1)
     if split_ct > 1:
-        check = split.split_line_item(check, line_item_id, split_ct)
+        check = splitit.split_line_item(check, line_item_id, split_ct)
 
     return flask.jsonify(check)
 
-@app.route('check/<check_id>/line-item/<line_item_id>', methods=['DELETE'])
+@app.route('/check/<check_id>/line-item/<line_item_id>', methods=['DELETE'])
 def remove_line_item(check_id, line_item_id):
     check = splitit.get_check(check_id)
 
     check = splitit.delete_line_item(check_id, line_item_id)
 
     return flask.jsonify(check)
+
+@app.route('/check/<check_id>/by-owner')
+def group_by_owner(check_id):
+    check = splitit.get_check(check_id)
+
+    return flask.jsonify(splitit.group_check_by_owner(check))
 
 @app.errorhandler(splitit_errors.SplititError)
 def handle_splitit_error(error):

@@ -317,33 +317,23 @@ def remove_line_item(check, line_item_id):
 
     return check
 
-# TODO This was implemented for a past model version, needs updating
-# def get_check_grouped_by_owner(date, name):
-#     check = _load_check(date, name)
-#     if not check:
-#         return {}
-#
-#     locations_by_id = {}
-#     for location in check['locations']:
-#         loc_id = location['id']
-#
-#         locations_by_id[loc_id] = location
-#
-#         loc_total = 0
-#
-#         for line_item in check['line_items']:
-#             if loc_id != line_item.get('location_id', DEFAULT_LOCATION_ID):
-#                 continue
-#
-#             loc_total += line_item['amount']
-#
-#         location['tip_multiplier'] = float(location['tip']) / loc_total
-#         location['tax_multiplier'] = float(location['tax']) / loc_total
-#
-#     by_owner = collections.Counter()
-#
-#     for line_item in check['line_items']:
-#         location = locations_by_id[line_item.get('location_id', DEFAULT_LOCATION_ID)]
-#         by_owner[line_item['owner']] += int(round((1 + location['tip_multiplier'] + location['tax_multiplier']) * line_item['amount']))
-#
-#     return by_owner
+def group_check_by_owner(check):
+    locations_by_id = {}
+    for location in check['locations']:
+        locations_by_id[location['id']] = location
+
+        loc_total = 0
+
+        for line_item in check['lineItems']:
+            loc_total += line_item['amountInCents']
+
+        location['tipMultiplier'] = float(location.get('tipInCents', 0)) / loc_total
+        location['taxMultiplier'] = float(location.get('taxInCents', 0)) / loc_total
+
+    by_owner = collections.Counter()
+
+    for line_item in check['lineItems']:
+        location = locations_by_id[line_item['locationId']]
+        by_owner[line_item['owner']] += int(round((1 + location['tipMultiplier'] + location['taxMultiplier']) * line_item['amountInCents']))
+
+    return by_owner
