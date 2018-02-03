@@ -1,10 +1,11 @@
 *pyc
+.pytest_cache/
 .coverage
 .Python
+
 bin/
-cover/
 database/
 include/
 lib/
-man/
+
 pip-selfcheck.json

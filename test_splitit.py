@@ -24,8 +24,8 @@ class TestSplitIt(unittest.TestCase):
 
     def _create_location(self, check, tax_in_cents=None, tip_in_cents=None):
         loc_num = len(check['locations'])
-        check = splitit.add_location(check, 'Location %d' % loc_num, tax_in_cents=tax_in_cents, tip_in_cents=tip_in_cents)
-        return check
+        loc = splitit.add_location(check, 'Location %d' % loc_num, tax_in_cents=tax_in_cents, tip_in_cents=tip_in_cents)
+        return loc
 
     def test_put_get_check(self):
         date = datetime.date.today().isoformat()
@@ -120,12 +120,13 @@ class TestSplitIt(unittest.TestCase):
         loc_name = 'New Location'
         tax = 105
         tip = 210
-        check = splitit.add_location(check, 'New Location', tax_in_cents=tax, tip_in_cents=tip)
+        new_location = splitit.add_location(check, 'New Location', tax_in_cents=tax, tip_in_cents=tip)
+
+        check = splitit.get_check(check['id'])
 
         locations = check['locations']
         self.assertEquals(2, len(locations))
 
-        new_location = locations[-1]
         self.assertEquals(loc_name, new_location['name'])
         self.assertEquals(tax, new_location['taxInCents'])
         self.assertEquals(tip, new_location['tipInCents'])
@@ -230,11 +231,11 @@ class TestSplitIt(unittest.TestCase):
 
     def test_delete_location(self):
         check = self._create_check()
-        check = self._create_location(check)
+        loc = self._create_location(check)
 
         self.assertEquals(2, len(check['locations']))
 
-        check = splitit.delete_location(check, check['locations'][-1]['id'])
+        check = splitit.delete_location(check, loc['id'])
 
         self.assertEquals(1, len(check['locations']))
 
@@ -254,11 +255,7 @@ class TestSplitIt(unittest.TestCase):
 
     def test_add_line_item_to_default_location(self):
         check = self._create_check()
-        check = self._create_location(check)
-
-        for location in check['locations']:
-            if location['name'] == splitit.DEFAULT_LOCATION_NAME:
-                location_id = location['id']
+        loc = self._create_location(check)
 
         self.assertFalse('lineItems' in check)
 
@@ -266,24 +263,18 @@ class TestSplitIt(unittest.TestCase):
         line_item_owner = 'John Doe'
         line_item_amt = 105
 
-        check = splitit.add_line_item(check, name=line_item_name, owner=line_item_owner, amount_in_cents=line_item_amt)
+        line_item = splitit.add_line_item(check, name=line_item_name, owner=line_item_owner, amount_in_cents=line_item_amt)
 
         self.assertEquals(1, len(check['lineItems']))
 
-        line_item = check['lineItems'][-1]
-
-        self.assertEquals(location_id, line_item['locationId'])
+        self.assertNotEquals(loc['id'], line_item['locationId'])
         self.assertEquals(line_item_name, line_item['name'])
         self.assertEquals(line_item_owner, line_item['owner'])
         self.assertEquals(line_item_amt, line_item['amountInCents'])
 
     def test_add_line_item_to_non_default_location(self):
         check = self._create_check()
-        check = self._create_location(check)
-
-        for location in check['locations']:
-            if location['name'] != splitit.DEFAULT_LOCATION_NAME:
-                location_id = location['id']
+        loc = self._create_location(check)
 
         self.assertFalse('lineItems' in check)
 
@@ -291,20 +282,18 @@ class TestSplitIt(unittest.TestCase):
         line_item_owner = 'John Doe'
         line_item_amt = 105
 
-        check = splitit.add_line_item(check, name=line_item_name, location_id=location_id, owner=line_item_owner, amount_in_cents=line_item_amt)
+        line_item = splitit.add_line_item(check, name=line_item_name, location_id=loc['id'], owner=line_item_owner, amount_in_cents=line_item_amt)
 
         self.assertEquals(1, len(check['lineItems']))
 
-        line_item = check['lineItems'][-1]
-
-        self.assertEquals(location_id, line_item['locationId'])
+        self.assertEquals(loc['id'], line_item['locationId'])
         self.assertEquals(line_item_name, line_item['name'])
         self.assertEquals(line_item_owner, line_item['owner'])
         self.assertEquals(line_item_amt, line_item['amountInCents'])
 
     def test_add_line_item_to_only_non_default_location(self):
         check = self._create_check()
-        check = self._create_location(check)
+        loc = self._create_location(check)
 
         for location in check['locations']:
             if location['name'] == splitit.DEFAULT_LOCATION_NAME:
@@ -320,7 +309,7 @@ class TestSplitIt(unittest.TestCase):
         line_item_owner = 'John Doe'
         line_item_amt = 105
 
-        check = splitit.add_line_item(check, name=line_item_name, owner=line_item_owner, amount_in_cents=line_item_amt)
+        line_item = splitit.add_line_item(check, name=line_item_name, owner=line_item_owner, amount_in_cents=line_item_amt)
 
         self.assertEquals(1, len(check['lineItems']))
 
@@ -353,9 +342,9 @@ class TestSplitIt(unittest.TestCase):
         check = self._create_check()
 
         name = 'Food'
-        check = splitit.add_line_item(check, name)
+        li = splitit.add_line_item(check, name)
 
-        orig_li = copy.deepcopy(check['lineItems'][-1])
+        orig_li = copy.deepcopy(li)
 
         new_name = 'Not Food'
         check = splitit.update_line_item(check, orig_li['id'], new_name, orig_li['locationId'])
@@ -369,9 +358,9 @@ class TestSplitIt(unittest.TestCase):
     def test_update_line_item_add_remove_owner(self):
         check = self._create_check()
 
-        check = splitit.add_line_item(check, 'Food', owner='Owner')
+        li = splitit.add_line_item(check, 'Food', owner='Owner')
 
-        orig_li = copy.deepcopy(check['lineItems'][-1])
+        orig_li = copy.deepcopy(li)
 
         new_owner = 'New Owner'
 
@@ -392,9 +381,9 @@ class TestSplitIt(unittest.TestCase):
     def test_update_line_item_add_remove_amount(self):
         check = self._create_check()
 
-        check = splitit.add_line_item(check, 'Food', amount_in_cents=105)
+        li = splitit.add_line_item(check, 'Food', amount_in_cents=105)
 
-        orig_li = copy.deepcopy(check['lineItems'][-1])
+        orig_li = copy.deepcopy(li)
 
         new_amt = 30
 
@@ -421,9 +410,7 @@ class TestSplitIt(unittest.TestCase):
     def test_update_line_item_no_name(self):
         check = self._create_check()
 
-        check = splitit.add_line_item(check, 'Food')
-
-        li = check['lineItems'][-1]
+        li = splitit.add_line_item(check, 'Food')
 
         with self.assertRaises(BadRequestError):
             splitit.update_line_item(check, li['id'], name=None, location_id=li['locationId'])
@@ -431,9 +418,7 @@ class TestSplitIt(unittest.TestCase):
     def test_update_line_item_no_location(self):
         check = self._create_check()
 
-        check = splitit.add_line_item(check, 'Food')
-
-        li = check['lineItems'][-1]
+        li = splitit.add_line_item(check, 'Food')
 
         with self.assertRaises(BadRequestError):
             splitit.update_line_item(check, li['id'], name=li['name'], location_id=None)
@@ -441,26 +426,22 @@ class TestSplitIt(unittest.TestCase):
     def test_remove_line_item(self):
         check = self._create_check()
 
-        check = splitit.add_line_item(check, 'Food')
-        check = splitit.add_line_item(check, 'Drink')
+        food_li = splitit.add_line_item(check, 'Food')
+        drink_li = splitit.add_line_item(check, 'Drink')
 
         self.assertEquals(2, len(check['lineItems']))
 
-        li = check['lineItems'][-1]
-
-        check = splitit.remove_line_item(check, li['id'])
+        check = splitit.remove_line_item(check, food_li['id'])
 
         self.assertEquals(1, len(check['lineItems']))
 
         for l in check['lineItems']:
-            self.assertNotEquals(li['id'], l['id'])
+            self.assertNotEquals(food_li['id'], l['id'])
 
     def test_remove_only_line_item(self):
         check = self._create_check()
 
-        check = splitit.add_line_item(check, 'Food')
-
-        li = check['lineItems'][-1]
+        li = splitit.add_line_item(check, 'Food')
 
         check = splitit.remove_line_item(check, li['id'])
 
@@ -479,11 +460,11 @@ class TestSplitIt(unittest.TestCase):
         line_item_owner = 'John Doe'
         line_item_amt = 200
 
-        check = splitit.add_line_item(check, name=line_item_name, owner=line_item_owner, amount_in_cents=line_item_amt)
+        li = splitit.add_line_item(check, name=line_item_name, owner=line_item_owner, amount_in_cents=line_item_amt)
 
         self.assertEquals(1, len(check['lineItems']))
 
-        line_item = copy.deepcopy(check['lineItems'][-1])
+        line_item = copy.deepcopy(li)
 
         check = splitit.split_line_item(check, line_item['id'], 1)
 
