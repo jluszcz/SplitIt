@@ -29,9 +29,9 @@ def create_location(check_id):
 
     check = splitit.get_check(check_id)
 
-    check = splitit.add_location(check, data.get('name'), data.get('taxInCents'), data.get('tipInCents'))
+    location = splitit.add_location(check, data.get('name'), data.get('taxInCents'), data.get('tipInCents'))
 
-    return flask.jsonify(check)
+    return flask.jsonify(location)
 
 @app.route('/check/<check_id>/location/<location_id>', methods=['PUT'])
 def update_location(check_id, location_id):
@@ -57,9 +57,9 @@ def create_line_item(check_id):
 
     check = splitit.get_check(check_id)
 
-    check = splitit.add_line_item(check, data.get('name'), data.get('locationId'), data.get('owner'), data.get('amountInCents'))
+    line_item = splitit.add_line_item(check, data.get('name'), data.get('locationId'), data.get('owner'), data.get('amountInCents'))
 
-    return flask.jsonify(check)
+    return flask.jsonify(line_item)
 
 @app.route('/check/<check_id>/line-item/<line_item_id>', methods=['PUT'])
 def update_line_item(check_id, line_item_id):

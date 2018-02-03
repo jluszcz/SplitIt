@@ -147,7 +147,7 @@ def add_location(check, location_name, tax_in_cents=None, tip_in_cents=None):
     check['locations'].append(location)
     _save_check(check)
 
-    return check
+    return location
 
 def update_location(check, location_id, location_name=None, tax_in_cents=None, tip_in_cents=None):
     _validate_tax_in_cents(tax_in_cents)
@@ -245,7 +245,7 @@ def add_line_item(check, name, location_id=None, owner=None, amount_in_cents=Non
     if save_check:
         _save_check(check)
 
-    return check
+    return line_item
 
 def _get_line_item(check, line_item_id):
     for line_item in check.get('lineItems', []):

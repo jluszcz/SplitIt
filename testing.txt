@@ -1,10 +1,32 @@
-export FLASK_DEBUG=1
-export FLASK_APP=splitit_api.py
 flask run
 
-http PUT http://127.0.0.1:5000/checks/20170714/FridayDrinks
-http GET http://127.0.0.1:5000/checks/20170714/FridayDrinks/locations
-http --json POST http://127.0.0.1:5000/checks/20170714/FridayDrinks/location/LiquidArtHouse <<< '{"tax": 350, "tip": 1000}'
-http --json POST http://127.0.0.1:5000/checks/20170714/FridayDrinks/location/Tico <<< '{"tax": 1064, "tip": 3200}'
-http --json POST http://127.0.0.1:5000/checks/20170714/FridayDrinks/location/Yvonnes <<< '{}'
-http GET http://127.0.0.1:5000/checks/20170714/FridayDrinks
+CHECK_ID=$(http --json POST http://127.0.0.1:5000/check <<< '{"date": "2017-07-14", "description": "Friday Drinks"}' | jq -r .id)
+
+YVONNES_ID=$(http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/location <<< '{"name": "Yvonne'"'"'s"}' | jq -r .id)
+
+TICO_ID=$(http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/location <<< '{"name": "Tico", "taxInCents": 1064, "tipInCents":3200}' | jq -r .id)
+
+LIQUID_ART_HOUSE_ID=$(http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/location <<< '{"name": "Liquid Art House", "taxInCents": 350, "tipInCents":1000}' | jq -r .id)
+
+http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/line-item <<< '{"name": "Drink", "locationId": "'${YVONNES_ID}'", "owner": "Jake", "amountInCents": 1800}'
+http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/line-item <<< '{"name": "Drink", "locationId": "'${YVONNES_ID}'", "owner": "Sarah", "amountInCents": 1800}'
+
+http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/line-item <<< '{"name": "Corona", "locationId": "'${TICO_ID}'", "owner": "Joe", "amountInCents": 600}'
+http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/line-item <<< '{"name": "Margarita", "locationId": "'${TICO_ID}'", "owner": "Jake", "amountInCents": 1200}'
+http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/line-item <<< '{"name": "Margarita", "locationId": "'${TICO_ID}'", "owner": "Sarah", "amountInCents": 1200}'
+http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/line-item <<< '{"name": "Margarita", "locationId": "'${TICO_ID}'", "owner": "Clare", "amountInCents": 1200}'
+http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/line-item <<< '{"name": "Olives & Guac", "locationId": "'${TICO_ID}'", "owner": "Joe", "amountInCents": 650}'
+http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/line-item <<< '{"name": "Olives & Guac", "locationId": "'${TICO_ID}'", "owner": "Jake", "amountInCents": 650}'
+http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/line-item <<< '{"name": "Olives & Guac", "locationId": "'${TICO_ID}'", "owner": "Sarah", "amountInCents": 650}'
+http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/line-item <<< '{"name": "Olives & Guac", "locationId": "'${TICO_ID}'", "owner": "Clare", "amountInCents": 650}'
+http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/line-item <<< '{"name": "Hamachi", "locationId": "'${TICO_ID}'", "owner": "Clare", "amountInCents": 1500}'
+http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/line-item <<< '{"name": "Shishito", "locationId": "'${TICO_ID}'", "owner": "Clare", "amountInCents": 1100}'
+http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/line-item <<< '{"name": "Burger", "locationId": "'${TICO_ID}'", "owner": "Jake", "amountInCents": 1900}'
+http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/line-item <<< '{"name": "Tacos", "locationId": "'${TICO_ID}'", "owner": "Joe", "amountInCents": 1000}'
+http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/line-item <<< '{"name": "Tuna Ceviche", "locationId": "'${TICO_ID}'", "owner": "Sarah", "amountInCents": 1600}'
+http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/line-item <<< '{"name": "Beets", "locationId": "'${TICO_ID}'", "owner": "Sarah", "amountInCents": 1300}'
+
+http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/line-item <<< '{"name": "Fair Fashioned", "locationId": "'${LIQUID_ART_HOUSE_ID}'", "owner": "Jake", "amountInCents": 1300}'
+http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/line-item <<< '{"name": "Evil Twin", "locationId": "'${LIQUID_ART_HOUSE_ID}'", "owner": "Joe", "amountInCents": 900}'
+http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/line-item <<< '{"name": "Wine", "locationId": "'${LIQUID_ART_HOUSE_ID}'", "owner": "Sarah", "amountInCents": 1400}'
+http --json POST http://127.0.0.1:5000/check/${CHECK_ID}/line-item <<< '{"name": "Wine", "locationId": "'${LIQUID_ART_HOUSE_ID}'", "owner": "Clare", "amountInCents": 1400}'
