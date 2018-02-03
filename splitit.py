@@ -157,41 +157,44 @@ def update_location(check, location_id, location_name=None, tax_in_cents=None, t
     _validate_tax_in_cents(tax_in_cents)
     _validate_tip_in_cents(tip_in_cents)
 
-    location_found = False
+    location = None
 
-    for location in check['locations']:
-        if location['id'] == location_id:
+    for loc in check['locations']:
+        if loc['id'] == location_id:
             if location_name:
-                location['name'] = location_name
+                loc['name'] = location_name
 
             if tax_in_cents:
-                location['taxInCents'] = tax_in_cents
+                loc['taxInCents'] = tax_in_cents
             else:
-                location.pop('taxInCents', None)
+                loc.pop('taxInCents', None)
 
             if tip_in_cents:
-                location['tipInCents'] = tip_in_cents
+                loc['tipInCents'] = tip_in_cents
             else:
-                location.pop('tipInCents', None)
+                loc.pop('tipInCents', None)
 
-            location_found = True
+            location = loc
             break
 
-    if not location_found:
+    if not location:
         raise NotFoundError('No location found for ID: %s' % location_id)
 
     _save_check(check)
 
-    return check
+    return location
 
 def delete_location(check, location_id):
-    locations = []
-    for location in check['locations']:
-        if location['id'] == location_id:
-            continue
-        locations.append(location)
+    location = None
 
-    if len(locations) == len(check['locations']):
+    locations = []
+    for loc in check['locations']:
+        if loc['id'] == location_id:
+            location = loc
+            continue
+        locations.append(loc)
+
+    if not location:
         raise NotFoundError('No location found for ID: %s' % location_id)
 
     if not locations:
@@ -200,7 +203,7 @@ def delete_location(check, location_id):
     check['locations'] = locations
     _save_check(check)
 
-    return check
+    return location
 
 def _validate_amount_in_cents(amount_in_cents):
     if amount_in_cents and (type(amount_in_cents) != int or amount_in_cents < 0):
@@ -282,7 +285,7 @@ def update_line_item(check, line_item_id, name=None, location_id=None, owner=Non
 
     _save_check(check)
 
-    return check
+    return line_item
 
 def split_line_item(check, line_item_id, split_ct):
     if type(split_ct) != int or split_ct < 1:
@@ -292,24 +295,30 @@ def split_line_item(check, line_item_id, split_ct):
 
     new_amount = int(line_item.get('amountInCents', 0) / split_ct)
 
+    line_items = [line_item]
+
     line_item['amountInCents'] = new_amount
 
     for n in range(split_ct - 1):
-        add_line_item(check, line_item['name'], line_item['locationId'], line_item.get('owner'), new_amount, save_check=False)
+        li = add_line_item(check, line_item['name'], line_item['locationId'], line_item.get('owner'), new_amount, save_check=False)
+        line_items.append(li)
 
     _save_check(check)
 
-    return check
+    return line_items
 
 def remove_line_item(check, line_item_id):
+    line_item = None
+
     line_items = []
     orig_line_items = check.get('lineItems', [])
-    for line_item in orig_line_items:
-        if line_item['id'] == line_item_id:
+    for li in orig_line_items:
+        if li['id'] == line_item_id:
+            line_item = li
             continue
-        line_items.append(line_item)
+        line_items.append(li)
 
-    if len(line_items) == len(orig_line_items):
+    if not line_item:
         raise NotFoundError('No line item found for ID: %s' % line_item_id)
 
     if line_items:
@@ -319,7 +328,7 @@ def remove_line_item(check, line_item_id):
 
     _save_check(check)
 
-    return check
+    return line_item
 
 def group_check_by_owner(check):
     locations_by_id = {}

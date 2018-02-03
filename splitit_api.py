@@ -39,17 +39,17 @@ def update_location(check_id, location_id):
 
     check = splitit.get_check(check_id)
 
-    check = splitit.update_location(check, location_id, data.get('name'), data.get('taxInCents'), data.get('tipInCents'))
+    location = splitit.update_location(check, location_id, data.get('name'), data.get('taxInCents'), data.get('tipInCents'))
 
-    return flask.jsonify(check)
+    return flask.jsonify(location)
 
 @app.route('/check/<check_id>/location/<location_id>', methods=['DELETE'])
 def remove_location(check_id, location_id):
     check = splitit.get_check(check_id)
 
-    check = splitit.delete_location(check, location_id)
+    location = splitit.delete_location(check, location_id)
 
-    return flask.jsonify(check)
+    return flask.jsonify(location)
 
 @app.route('/check/<check_id>/line-item', methods=['POST'])
 def create_line_item(check_id):
@@ -67,7 +67,7 @@ def update_line_item(check_id, line_item_id):
 
     check = splitit.get_check(check_id)
 
-    check = splitit.update_line_item(check, line_item_id, data.get('name'), data.get('locationId'), data.get('owner'), data.get('amountInCents'))
+    line_item = splitit.update_line_item(check, line_item_id, data.get('name'), data.get('locationId'), data.get('owner'), data.get('amountInCents'))
 
     split_ct = data.get('splitCount', 1)
     if split_ct > 1:
@@ -75,13 +75,23 @@ def update_line_item(check_id, line_item_id):
 
     return flask.jsonify(check)
 
+@app.route('/check/<check_id>/line-item/<line_item_id>/split', methods=['PUT'])
+def split_line_item(check_id, line_item_id):
+    data = flask.request.get_json()
+
+    check = splitit.get_check(check_id)
+
+    line_items = splitit.split_line_item(check, line_item_id, data.get('splitCount', 1))
+
+    return flask.jsonify(line_items)
+
 @app.route('/check/<check_id>/line-item/<line_item_id>', methods=['DELETE'])
 def remove_line_item(check_id, line_item_id):
     check = splitit.get_check(check_id)
 
-    check = splitit.delete_line_item(check_id, line_item_id)
+    line_item = splitit.delete_line_item(check_id, line_item_id)
 
-    return flask.jsonify(check)
+    return flask.jsonify(line_item)
 
 @app.route('/check/<check_id>/by-owner')
 def group_by_owner(check_id):
