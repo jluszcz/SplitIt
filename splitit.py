@@ -33,15 +33,19 @@ def _load_checks():
 def _load_check(check_id):
     try:
         with open(os.path.join(_DATABASE_DIR, '%s.json' % check_id)) as f:
-            return json.loads(f.read())
+            return json.load(f)
     except IOError:
         raise NotFoundError('No check found for ID: %s' % check_id)
 
 def _save_check(check):
     check_id = check['id']
     logging.debug('Saving %s', check_id)
+
+    if not os.path.isdir(_DATABASE_DIR):
+        os.mkdir(_DATABASE_DIR)
+
     with open(os.path.join(_DATABASE_DIR, '%s.json' % check_id), 'w') as f:
-        f.write(json.dumps(check))
+        json.dump(check, f)
 
 def _delete_check(check_id):
     fname = os.path.join(_DATABASE_DIR, '%s.json' % check_id)
