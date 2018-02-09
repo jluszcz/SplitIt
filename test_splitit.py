@@ -495,3 +495,75 @@ class TestSplitIt(unittest.TestCase):
 
         with self.assertRaises(BadRequestError):
             splitit.split_line_item(check, 'id', '0')
+
+    def test_group_check_by_owner_single_owner_single_location(self):
+        check = self._create_check()
+
+        location_id = check['locations'][-1]['id']
+        splitit.update_location(check, location_id, tax_in_cents=500, tip_in_cents=2000)
+
+        splitit.add_line_item(check, 'A', location_id, owner='Alice', amount_in_cents=1000)
+        splitit.add_line_item(check, 'B', location_id, owner='Alice', amount_in_cents=1500)
+        splitit.add_line_item(check, 'C', location_id, owner='Alice', amount_in_cents=2000)
+        splitit.add_line_item(check, 'D', location_id, owner='Alice', amount_in_cents=2500)
+        splitit.add_line_item(check, 'E', location_id, owner='Alice', amount_in_cents=3000)
+
+        by_owner = splitit.group_check_by_owner(check)
+
+        self.assertEquals(12500, by_owner.get('Alice'))
+
+    def test_group_check_by_owner_multiple_owners_single_location(self):
+        check = self._create_check()
+
+        location_id = check['locations'][-1]['id']
+        splitit.update_location(check, location_id, tax_in_cents=500, tip_in_cents=2000)
+
+        splitit.add_line_item(check, 'A', location_id, owner='Alice', amount_in_cents=1000)
+        splitit.add_line_item(check, 'B', location_id, owner='Bob', amount_in_cents=1500)
+        splitit.add_line_item(check, 'C', location_id, owner='Alice', amount_in_cents=2000)
+        splitit.add_line_item(check, 'D', location_id, owner='Bob', amount_in_cents=2500)
+        splitit.add_line_item(check, 'E', location_id, owner='Alice', amount_in_cents=3000)
+
+        by_owner = splitit.group_check_by_owner(check)
+
+        self.assertEquals(7500, by_owner.get('Alice'))
+        self.assertEquals(5000, by_owner.get('Bob'))
+
+    def test_group_check_by_owner_single_owner_multiple_locations(self):
+        check = self._create_check()
+
+        location_id_1 = check['locations'][-1]['id']
+        splitit.update_location(check, location_id_1, tax_in_cents=500, tip_in_cents=2000)
+
+        location_id_2 = splitit.add_location(check, 'Location', tax_in_cents=1000, tip_in_cents=3000)['id']
+
+        splitit.add_line_item(check, 'A', location_id_1, owner='Alice', amount_in_cents=1000)
+        splitit.add_line_item(check, 'B', location_id_2, owner='Alice', amount_in_cents=1500)
+        splitit.add_line_item(check, 'C', location_id_1, owner='Alice', amount_in_cents=2000)
+        splitit.add_line_item(check, 'D', location_id_2, owner='Alice', amount_in_cents=2500)
+        splitit.add_line_item(check, 'E', location_id_1, owner='Alice', amount_in_cents=3000)
+        splitit.add_line_item(check, 'F', location_id_2, owner='Alice', amount_in_cents=3500)
+
+        by_owner = splitit.group_check_by_owner(check)
+
+        self.assertEquals(20000, by_owner.get('Alice'))
+
+    def test_group_check_by_owner_multiple_owners_multiple_locations(self):
+        check = self._create_check()
+
+        location_id_1 = check['locations'][-1]['id']
+        splitit.update_location(check, location_id_1, tax_in_cents=500, tip_in_cents=2000)
+
+        location_id_2 = splitit.add_location(check, 'Location', tax_in_cents=1000, tip_in_cents=3000)['id']
+
+        splitit.add_line_item(check, 'A', location_id_1, owner='Alice', amount_in_cents=1000)
+        splitit.add_line_item(check, 'B', location_id_2, owner='Alice', amount_in_cents=1500)
+        splitit.add_line_item(check, 'C', location_id_1, owner='Bob', amount_in_cents=2000)
+        splitit.add_line_item(check, 'D', location_id_2, owner='Bob', amount_in_cents=2500)
+        splitit.add_line_item(check, 'E', location_id_1, owner='Alice', amount_in_cents=3000)
+        splitit.add_line_item(check, 'F', location_id_2, owner='Bob', amount_in_cents=3500)
+
+        by_owner = splitit.group_check_by_owner(check)
+
+        self.assertEquals(7967, by_owner.get('Alice'))
+        self.assertEquals(12033, by_owner.get('Bob'))

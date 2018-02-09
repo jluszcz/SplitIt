@@ -338,7 +338,8 @@ def group_check_by_owner(check):
         loc_total = 0
 
         for line_item in check['lineItems']:
-            loc_total += line_item['amountInCents']
+            if location['id'] == line_item['locationId']:
+                loc_total += line_item['amountInCents']
 
         location['tipMultiplier'] = float(location.get('tipInCents', 0)) / loc_total
         location['taxMultiplier'] = float(location.get('taxInCents', 0)) / loc_total
