@@ -1,29 +1,665 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "SplitIt API",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "title": "SplitIt",
+    "description": "Smart check splitting",
+    "contact": {
+      "name": "Jacob Luszcz",
+      "email": "jacob.luszcz@gmail.com",
+      "url": "http://split.ist"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
   },
+  "host": "split.ist",
+  "basePath": "/api",
   "schemes": [
     "https"
   ],
-  "basePath": "/v1",
+  "consumes": [
+    "application/json"
+  ],
   "produces": [
     "application/json"
   ],
   "paths": {
     "/checks": {
       "get": {
-        "summary": "Checks",
-        "description": "The Checks endpoint returns information about the checks that SplitIt is aware of.",
+        "operationId": "getChecks",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "description": "pagination token",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "maximum number of results to return",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1,
+            "maximum": 100
+          }
+        ],
         "responses": {
           "200": {
-            "description": "An array of CheckDescriptions",
+            "description": "check response",
             "schema": {
               "type": "array",
               "items": {
-                "$ref": "#/definitions/CheckDescription"
+                "$ref": "#/definitions/Check"
               }
+            }
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createCheck",
+        "parameters": [
+          {
+            "name": "check",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/NewCheck"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "check response",
+            "schema": {
+              "$ref": "#/definitions/Check"
+            }
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/checks/{id}": {
+      "get": {
+        "operationId": "getCheck",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "check response",
+            "schema": {
+              "$ref": "#/definitions/Check"
+            }
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateCheck",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "check",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Check"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "check response",
+            "schema": {
+              "$ref": "#/definitions/Check"
+            }
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteCheck",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "check deleted"
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/checks/{id}/entries": {
+      "get": {
+        "operationId": "getEntries",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "description": "pagination token",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "maximum number of results to return",
+            "required": false,
+            "type": "integer",
+            "format": "int32",
+            "minimum": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Entry"
+              }
+            }
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createEntry",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "entry",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/NewEntry"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "entry response",
+            "schema": {
+              "$ref": "#/definitions/Entry"
+            }
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/checks/{id}/entries/{entryId}": {
+      "get": {
+        "operationId": "getEntry",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "entry response",
+            "schema": {
+              "$ref": "#/definitions/Entry"
+            }
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateEntry",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "entry",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Entry"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "entry response",
+            "schema": {
+              "$ref": "#/definitions/Entry"
+            }
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteEntry",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "entryId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "entry deleted"
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/checks/{id}/locations": {
+      "get": {
+        "operationId": "getLocations",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "description": "pagination token",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "maximum number of results to return",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "location response",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Location"
+              }
+            }
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createLocation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "location",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/NewLocation"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "location response",
+            "schema": {
+              "$ref": "#/definitions/Location"
+            }
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/checks/{id}/locations/{locationId}": {
+      "get": {
+        "operationId": "getLocation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "locationId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "location response",
+            "schema": {
+              "$ref": "#/definitions/Location"
+            }
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateLocation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "locationId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "location",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Location"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "location response",
+            "schema": {
+              "$ref": "#/definitions/Location"
+            }
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteLocation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "locationId",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "location deleted"
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/users": {
+      "post": {
+        "operationId": "createUser",
+        "parameters": [
+          {
+            "name": "user",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/NewUser"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "user response",
+            "schema": {
+              "$ref": "#/definitions/User"
+            }
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "operationId": "getUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "user response",
+            "schema": {
+              "$ref": "#/definitions/Check"
+            }
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          },
+          {
+            "name": "user",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/User"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "user response",
+            "schema": {
+              "$ref": "#/definitions/User"
+            }
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "format": "uuid"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "user deleted"
+          },
+          "default": {
+            "description": "unexpected error",
+            "schema": {
+              "$ref": "#/definitions/Error"
             }
           }
         }
@@ -31,118 +667,202 @@
     }
   },
   "definitions": {
-    "Owner": {
+    "NewCheck": {
       "type": "object",
+      "required": [
+        "description",
+        "date"
+      ],
       "properties": {
-        "owner_id": {
-          "type": "string",
-          "description": "Unique identifier representing a specific line item owner in a given check. For example, \"John Doe\" will have a different owner_id for a check on 2017-10-22 than for a check on 2017-11-22."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the owner."
-        }
-      }
-    },
-    "Location": {
-      "type": "object",
-      "properties": {
-        "location_id": {
-          "type": "string",
-          "description": "Unique identifier representing a specific location in a given check. For example, \"Per Se\" will have a different location_id for a check on 2017-10-22 than for a check on 2017-11-22."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the location."
-        },
-        "tax_amount_in_cents": {
-          "type": "integer",
-          "format": "int32",
-          "minimum": 0,
-          "description": "Amount pad for tax at this location, in cents."
-        },
-        "tip_amount_in_cents": {
-          "type": "integer",
-          "format": "int32",
-          "minimum": 0,
-          "description": "Amount pad for tip at this location, in cents."
-        }
-      }
-    },
-    "LineItem": {
-      "type": "object",
-      "properties": {
-        "line_item_id": {
-          "type": "string",
-          "description": "Unique identifier representing a specific line item."
-        },
-        "name": {
-          "type": "string",
-          "description": "Name of the line item."
-        },
-        "owner": {
-          "type": "string",
-          "description": "Unique identifier of the owner of this line item."
-        },
-        "location": {
-          "type": "string",
-          "description": "Unique identifier of the location this line item was purchased at"
-        },
-        "amount_in_cents": {
-          "type": "integer",
-          "format": "int32",
-          "minimum": 1,
-          "description": "Amount paid for this line item, in cents, before tax and tip."
-        }
-      }
-    },
-    "CheckDescription": {
-      "type": "object",
-      "properties": {
-        "check_id": {
-          "type": "string",
-          "description": "Unique identifier representing this check."
-        },
         "description": {
-          "type": "string",
-          "description": "A description for this check, i.e., \"TGIFriday's\", \"Per Se\", etc."
+          "type": "string"
         },
         "date": {
           "type": "string",
-          "format": "date",
-          "description": "Date this check was paid for."
+          "format": "date"
         }
       }
     },
     "Check": {
+      "type": "object",
       "allOf": [
         {
-          "$ref": "#/definitions/CheckDescription"
+          "$ref": "#/definitions/NewCheck"
         },
         {
-          "type": "object",
+          "required": [
+            "id",
+            "createTimestamp"
+          ],
           "properties": {
-            "owners": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "createTimestamp": {
+              "type": "string",
+              "format": "dateTime"
+            },
+            "locationIds": {
               "type": "array",
               "items": {
-                "$ref": "#/definitions/Owner"
+                "type": "string",
+                "format": "uuid"
               }
             },
-            "locations": {
+            "entryIds": {
               "type": "array",
               "items": {
-                "$ref": "#/definitions/Location"
-              }
-            },
-            "line_items": {
-              "type": "array",
-              "items": {
-                "$ref": "#/definitions/LineItem"
+                "type": "string",
+                "format": "uuid"
               }
             }
           }
         }
       ]
+    },
+    "NewEntry": {
+      "type": "object",
+      "required": [
+        "description"
+      ],
+      "properties": {
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "Entry": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/NewEntry"
+        },
+        {
+          "required": [
+            "id",
+            "createTimestamp",
+            "amount"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "createTimestamp": {
+              "type": "string",
+              "format": "dateTime"
+            },
+            "amount": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            },
+            "locationId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "ownerIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "NewLocation": {
+      "type": "object",
+      "required": [
+        "description"
+      ],
+      "properties": {
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "Location": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/NewLocation"
+        },
+        {
+          "required": [
+            "id"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "tax": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            },
+            "tip": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        }
+      ]
+    },
+    "NewUser": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        }
+      }
+    },
+    "User": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/definitions/NewUser"
+        },
+        {
+          "required": [
+            "id",
+            "createTimestamp"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "createTimestamp": {
+              "type": "string",
+              "format": "dateTime"
+            }
+          }
+        }
+      ]
+    },
+    "Error": {
+      "type": "object",
+      "required": [
+        "code",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
     }
   }
 }
