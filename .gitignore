@@ -2,6 +2,10 @@
 .pytest_cache/
 .coverage
 .Python
+*__pycache__*
+
+*tfstate*
+.terraform/
 
 bin/
 database/
