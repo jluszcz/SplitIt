@@ -103,21 +103,25 @@ def put_location(check, location_name=None, tax_in_cents=None, tip_in_cents=None
     return location
 
 
-def update_location(check, location_id, location_name=None, tax_in_cents=None, tip_in_cents=None):
+def update_location(check, location_id, name=None, tax_in_cents=None, tip_in_cents=None):
     _validate_tax_in_cents(tax_in_cents)
     _validate_tip_in_cents(tip_in_cents)
 
     location = None
 
+    modified = False
     for loc in check.locations:
         if loc.location_id == location_id:
-            if location_name:
-                loc.name = location_name
+            if name:
+                modified = True
+                loc.name = name
 
             if tax_in_cents is not None:
+                modified = True
                 loc.tax_in_cents = tax_in_cents
 
             if tip_in_cents is not None:
+                modified = True
                 loc.tip_in_cents = tip_in_cents
 
             location = loc
@@ -126,7 +130,8 @@ def update_location(check, location_id, location_name=None, tax_in_cents=None, t
     if not location:
         return None
 
-    check.save()
+    if modified:
+        check.save()
 
     return location
 
