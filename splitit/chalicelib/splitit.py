@@ -166,6 +166,11 @@ def _validate_amount_in_cents(amount_in_cents):
         raise ValueError('Invalid amount: %s' % str(amount_in_cents))
 
 
+def _validate_owners(owners):
+    if owners and len(owners) != len(set(owners)):
+        raise ValueError('Duplicate owners in: %s' % ', '.join(owners))
+
+
 def _get_location(check, location_id):
     if not location_id:
         if len(check.locations) == 1:
@@ -183,18 +188,19 @@ def _get_location(check, location_id):
     return None
 
 
-def put_line_item(check, description, location_id=None, owners=None, amount_in_cents=None, save_check=True):
-    if not description:
-        raise ValueError('Missing line item name')
+def put_line_item(check, name, location_id=None, owners=None, amount_in_cents=None, save_check=True):
+    if not name:
+        raise ValueError('Missing name')
 
     location = _get_location(check, location_id)
     if not location:
-        raise ValueError('Location not found')
+        raise KeyError('Location not found')
 
     _validate_amount_in_cents(amount_in_cents)
+    _validate_owners(owners)
 
     line_item = LineItem()
-    line_item.description = description
+    line_item.name = name
     line_item.check_id = check.check_id
     line_item.location_id = location.location_id
 
@@ -249,28 +255,6 @@ def update_line_item(check, line_item_id, name=None, location_id=None, owner=Non
     check.save()
 
     return line_item
-
-
-def split_line_item(check, line_item_id, split_ct):
-    if type(split_ct) != int or split_ct < 1:
-        raise ValueError('Invalid split count: %s' % str(split_ct))
-
-    line_item = _get_line_item(check, line_item_id)
-
-    new_amount = int(line_item.get('amountInCents', 0) / split_ct)
-
-    line_items = [line_item]
-
-    line_item['amountInCents'] = new_amount
-
-    # for n in range(split_ct - 1):
-    #     li = add_line_item(check, line_item['name'], line_item['locationId'], line_item.get('owner'), new_amount,
-    #                        save_check=False)
-    #     line_items.append(li)
-
-    check.save()
-
-    return line_items
 
 
 def remove_line_item(check, line_item_id):

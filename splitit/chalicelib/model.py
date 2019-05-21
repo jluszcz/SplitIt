@@ -23,7 +23,7 @@ class LineItem(Model):
     line_item_id = UnicodeAttribute(hash_key=True, attr_name='LineItemId', default=_create_id)
     check_id = UnicodeAttribute()
     location_id = UnicodeAttribute()
-    description = UnicodeAttribute()
+    name = UnicodeAttribute()
     amount_in_cents = NumberAttribute(default=0)
     owners = ListAttribute(default=list)
 
@@ -32,7 +32,7 @@ class LineItem(Model):
             'lineItemId': self.line_item_id,
             'checkId': self.check_id,
             'locationId': self.location_id,
-            'description': self.description,
+            'name': self.name,
             'amountInCents': self.amount_in_cents,
             'owners': self.owners,
         }

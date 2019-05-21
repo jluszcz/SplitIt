@@ -5,10 +5,14 @@ from chalicelib import splitit, model
 ID = '88786937-E9FA-4013-9FA6-D419C3E16815'
 VALID_DATE = '2019-05-20'
 VALID_DESC = 'Foo bar baz'
-VALID_NAME = 'Some Bar'
+
+VALID_LOCATION_NAME = 'Some Bar'
 VALID_TAX = 100
 VALID_TIP = 200
 
+VALID_ITEM_NAME = 'Some Drink'
+VALID_AMOUNT = 300
+VALID_OWNERS = ['Foo', 'Bar', 'Baz']
 
 @pytest.fixture(autouse=True)
 def setup_fake_ddb(mocker):
@@ -178,39 +182,39 @@ def test_put_location_duplicate_name():
 
 def test_put_location():
     check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
-    location = splitit.put_location(check, location_name=VALID_NAME, tax_in_cents=VALID_TAX, tip_in_cents=VALID_TIP)
+    location = splitit.put_location(check, location_name=VALID_LOCATION_NAME, tax_in_cents=VALID_TAX, tip_in_cents=VALID_TIP)
 
     assert 2 == len(check.locations)
     assert location in check.locations
 
     assert location.location_id
-    assert VALID_NAME == location.name
+    assert VALID_LOCATION_NAME == location.name
     assert VALID_TAX == location.tax_in_cents
     assert VALID_TIP == location.tip_in_cents
 
 
 def test_put_location_no_tip():
     check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
-    location = splitit.put_location(check, location_name=VALID_NAME, tax_in_cents=VALID_TAX)
+    location = splitit.put_location(check, location_name=VALID_LOCATION_NAME, tax_in_cents=VALID_TAX)
 
     assert 2 == len(check.locations)
     assert location in check.locations
 
     assert location.location_id
-    assert VALID_NAME == location.name
+    assert VALID_LOCATION_NAME == location.name
     assert VALID_TAX == location.tax_in_cents
     assert not location.tip_in_cents
 
 
 def test_put_location_no_tax():
     check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
-    location = splitit.put_location(check, location_name=VALID_NAME, tip_in_cents=VALID_TIP)
+    location = splitit.put_location(check, location_name=VALID_LOCATION_NAME, tip_in_cents=VALID_TIP)
 
     assert 2 == len(check.locations)
     assert location in check.locations
 
     assert location.location_id
-    assert VALID_NAME == location.name
+    assert VALID_LOCATION_NAME == location.name
     assert not location.tax_in_cents
     assert VALID_TIP == location.tip_in_cents
 
@@ -232,14 +236,14 @@ def test_update_location():
     model.Check.save.reset_mock()
 
     location = check.locations[0]
-    assert VALID_NAME != location.name
+    assert VALID_LOCATION_NAME != location.name
     assert VALID_TAX != location.tax_in_cents
     assert VALID_TIP != location.tip_in_cents
 
-    location = splitit.update_location(check, location_id=location.location_id, name=VALID_NAME, tip_in_cents=VALID_TIP,
+    location = splitit.update_location(check, location_id=location.location_id, name=VALID_LOCATION_NAME, tip_in_cents=VALID_TIP,
                                        tax_in_cents=VALID_TAX)
 
-    assert VALID_NAME == location.name
+    assert VALID_LOCATION_NAME == location.name
     assert VALID_TAX == location.tax_in_cents
     assert VALID_TIP == location.tip_in_cents
     model.Check.save.assert_called_once()
@@ -251,13 +255,13 @@ def test_update_location_name():
     model.Check.save.reset_mock()
 
     location = check.locations[0]
-    assert VALID_NAME != location.name
+    assert VALID_LOCATION_NAME != location.name
     assert VALID_TAX != location.tax_in_cents
     assert VALID_TIP != location.tip_in_cents
 
-    location = splitit.update_location(check, location_id=location.location_id, name=VALID_NAME)
+    location = splitit.update_location(check, location_id=location.location_id, name=VALID_LOCATION_NAME)
 
-    assert VALID_NAME == location.name
+    assert VALID_LOCATION_NAME == location.name
     assert VALID_TAX != location.tax_in_cents
     assert VALID_TIP != location.tip_in_cents
     model.Check.save.assert_called_once()
@@ -269,13 +273,13 @@ def test_update_location_tip():
     model.Check.save.reset_mock()
 
     location = check.locations[0]
-    assert VALID_NAME != location.name
+    assert VALID_LOCATION_NAME != location.name
     assert VALID_TAX != location.tax_in_cents
     assert VALID_TIP != location.tip_in_cents
 
     location = splitit.update_location(check, location_id=location.location_id, tip_in_cents=VALID_TIP)
 
-    assert VALID_NAME != location.name
+    assert VALID_LOCATION_NAME != location.name
     assert VALID_TAX != location.tax_in_cents
     assert VALID_TIP == location.tip_in_cents
     model.Check.save.assert_called_once()
@@ -287,13 +291,13 @@ def test_update_location_tax():
     model.Check.save.reset_mock()
 
     location = check.locations[0]
-    assert VALID_NAME != location.name
+    assert VALID_LOCATION_NAME != location.name
     assert VALID_TAX != location.tax_in_cents
     assert VALID_TIP != location.tip_in_cents
 
     location = splitit.update_location(check, location_id=location.location_id, tax_in_cents=VALID_TAX)
 
-    assert VALID_NAME != location.name
+    assert VALID_LOCATION_NAME != location.name
     assert VALID_TAX == location.tax_in_cents
     assert VALID_TIP != location.tip_in_cents
     model.Check.save.assert_called_once()
@@ -340,7 +344,7 @@ def test_delete_location_with_line_items():
 
 def test_delete_location():
     check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
-    location = splitit.put_location(check, location_name=VALID_NAME)
+    location = splitit.put_location(check, location_name=VALID_LOCATION_NAME)
 
     model.Check.save.reset_mock()
 
@@ -351,3 +355,90 @@ def test_delete_location():
     assert 1 == len(check.locations)
     assert location.location_id == deleted.location_id
     model.Check.save.assert_called_once()
+
+
+def test_put_line_item_no_description():
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+
+    with pytest.raises(ValueError, match=r'Missing name'):
+        splitit.put_line_item(check, None)
+
+
+def test_put_line_item_bad_location():
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+
+    with pytest.raises(KeyError, match=r'Location'):
+        splitit.put_line_item(check, VALID_ITEM_NAME, ID)
+
+
+def test_put_line_item_check_has_one_location():
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+    default_location_id = check.locations[0].location_id
+
+    location = splitit.put_location(check, VALID_LOCATION_NAME)
+
+    splitit.delete_location(check, default_location_id)
+
+    line_item = splitit.put_line_item(check, VALID_ITEM_NAME)
+
+    assert line_item is not None
+    assert location.location_id == line_item.location_id
+
+
+def test_put_line_item_check_has_multiple_locations():
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+    default_location_id = check.locations[0].location_id
+
+    location = splitit.put_location(check, VALID_LOCATION_NAME)
+
+    line_item = splitit.put_line_item(check, VALID_ITEM_NAME, location.location_id)
+
+    assert line_item is not None
+    assert location.location_id == line_item.location_id
+
+
+def test_put_line_item_check_default_location():
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+    default_location_id = check.locations[0].location_id
+    splitit.put_location(check, VALID_LOCATION_NAME)
+
+    line_item = splitit.put_line_item(check, VALID_ITEM_NAME)
+
+    assert line_item is not None
+    assert default_location_id == line_item.location_id
+
+
+def _test_put_line_item_invalid_amount(amount):
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+
+    with pytest.raises(ValueError, match=r'^Invalid amount'):
+        splitit.put_line_item(check, VALID_ITEM_NAME, amount_in_cents=amount)
+
+
+def test_put_line_item_invalid_amount_not_int():
+    _test_put_line_item_invalid_amount('100')
+
+
+def test_put_line_item_invalid_amount_is_negative():
+    _test_put_line_item_invalid_amount(-100)
+
+
+def test_put_line_item_duplicate_owners():
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+
+    with pytest.raises(ValueError, match=r'Duplicate owner'):
+        splitit.put_line_item(check, VALID_ITEM_NAME, owners=['Foo', 'Foo'])
+
+
+def test_put_line_item():
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+    default_location_id = check.locations[0].location_id
+
+    line_item = splitit.put_line_item(check, VALID_ITEM_NAME, amount_in_cents=VALID_AMOUNT, owners=VALID_OWNERS)
+
+    assert line_item is not None
+    assert default_location_id == line_item.location_id
+    assert check.check_id == line_item.check_id
+    assert VALID_ITEM_NAME == line_item.name
+    assert VALID_AMOUNT == line_item.amount_in_cents
+    assert VALID_OWNERS == line_item.owners
