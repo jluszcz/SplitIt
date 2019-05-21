@@ -12,6 +12,11 @@ class ConflictError(Exception):
     pass
 
 
+def _validate_item_exists(item, type, item_id):
+    if not item:
+        raise KeyError('%s %s does not exist' % (type, item_id))
+
+
 def get_check(check_id):
     try:
         return Check.get(check_id)
@@ -166,9 +171,13 @@ def _validate_amount_in_cents(amount_in_cents):
         raise ValueError('Invalid amount: %s' % str(amount_in_cents))
 
 
-def _validate_owners(owners):
-    if owners and len(owners) != len(set(owners)):
-        raise ValueError('Duplicate owners in: %s' % ', '.join(owners))
+def _validate_owners(owners, expected_owner_count=None):
+    if owners:
+        if expected_owner_count is None:
+            expected_owner_count = len(owners)
+
+        if expected_owner_count != len(set(owners)):
+            raise ValueError('Duplicate owners in: %s' % ', '.join(owners))
 
 
 def _get_location(check, location_id):
@@ -193,8 +202,7 @@ def put_line_item(check, name, location_id=None, owners=None, amount_in_cents=No
         raise ValueError('Missing name')
 
     location = _get_location(check, location_id)
-    if not location:
-        raise KeyError('Location not found')
+    _validate_item_exists(location, 'Location', location_id)
 
     _validate_amount_in_cents(amount_in_cents)
     _validate_owners(owners)
@@ -222,37 +230,64 @@ def put_line_item(check, name, location_id=None, owners=None, amount_in_cents=No
     return line_item
 
 
-def _get_line_item(check, line_item_id):
-    for line_item in check.get('lineItems', []):
-        if line_item_id == line_item['id']:
-            return line_item
-    raise KeyError('No line item found for ID: %s' % line_item_id)
+def _validate_line_item_in_check(check, line_item_id):
+    if line_item_id not in check.line_item_ids:
+        _validate_item_exists(None, 'Line Item', line_item_id)
 
 
-def update_line_item(check, line_item_id, name=None, location_id=None, owner=None, amount_in_cents=None):
-    line_item = _get_line_item(check, line_item_id)
+def _get_line_item(line_item_id):
+    try:
+        return LineItem.get(line_item_id)
+    except LineItem.DoesNotExist:
+        return None
+
+
+def update_line_item(check, line_item_id, name=None, location_id=None, owners_to_add=None, owners_to_remove=None,
+                     amount_in_cents=None):
+
+    _validate_line_item_in_check(check, line_item_id)
+
+    line_item = _get_line_item(line_item_id)
+    _validate_item_exists(line_item, 'Line Item', line_item_id)
+
+    modified = False
 
     if name:
-        line_item['name'] = name
-    else:
-        raise ValueError('Missing line item name')
+        line_item.name = name
+        modified = True
 
     if location_id:
-        line_item['locationId'] = location_id
-    else:
-        raise ValueError('Missing line item location')
+        new_location = _get_location(check, location_id)
+        _validate_item_exists(new_location, 'Location', location_id)
 
-    if owner:
-        line_item['owner'] = owner
-    else:
-        line_item.pop('owner', None)
+        original_location_id = line_item.location_id
+        original_location = _get_location(check, original_location_id)
+        original_location.line_item_count -= 1
 
-    if amount_in_cents:
-        line_item['amountInCents'] = amount_in_cents
-    else:
-        line_item.pop('amountInCents', None)
+        new_location.line_item_count += 1
+        line_item.location_id = location_id
 
-    check.save()
+        modified = True
+
+    if owners_to_add:
+        orig_owner_ct = len(line_item.owners)
+        line_item.owners.extend(owners_to_add)
+        _validate_owners(line_item.owners, orig_owner_ct + len(owners_to_add))
+
+        modified = True
+
+    if owners_to_remove:
+        line_item.owners = [o for o in line_item.owners if o not in owners_to_remove]
+
+        modified = True
+
+    if amount_in_cents is not None:
+        _validate_amount_in_cents(amount_in_cents)
+        line_item.amount_in_cents = amount_in_cents
+        modified = True
+
+    if modified:
+        check.save()
 
     return line_item
 

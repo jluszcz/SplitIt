@@ -14,6 +14,7 @@ VALID_ITEM_NAME = 'Some Drink'
 VALID_AMOUNT = 300
 VALID_OWNERS = ['Foo', 'Bar', 'Baz']
 
+
 @pytest.fixture(autouse=True)
 def setup_fake_ddb(mocker):
     mocker.patch('chalicelib.model.Check.save')
@@ -387,7 +388,6 @@ def test_put_line_item_check_has_one_location():
 
 def test_put_line_item_check_has_multiple_locations():
     check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
-    default_location_id = check.locations[0].location_id
 
     location = splitit.put_location(check, VALID_LOCATION_NAME)
 
@@ -442,3 +442,136 @@ def test_put_line_item():
     assert VALID_ITEM_NAME == line_item.name
     assert VALID_AMOUNT == line_item.amount_in_cents
     assert VALID_OWNERS == line_item.owners
+
+
+def test_update_line_item_not_in_check(mocker):
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+    line_item = splitit.put_line_item(check, VALID_ITEM_NAME)
+
+    mocker.patch('chalicelib.model.LineItem.get', side_effect=model.LineItem.DoesNotExist)
+
+    with pytest.raises(KeyError, match=r'Line Item'):
+        splitit.update_line_item(check, line_item.line_item_id)
+
+
+def test_update_non_existent_line_item():
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+
+    with pytest.raises(KeyError, match=r'Line Item'):
+        splitit.update_line_item(check, ID)
+
+
+def test_update_line_item_no_changes(mocker):
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+    line_item = splitit.put_line_item(check, VALID_ITEM_NAME)
+
+    mocker.patch('chalicelib.model.LineItem.get', return_value=line_item)
+    model.Check.save.reset_mock()
+
+    line_item = splitit.update_line_item(check, line_item.line_item_id)
+
+    model.Check.save.assert_not_called()
+
+
+def test_update_line_item_name(mocker):
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+    line_item = splitit.put_line_item(check, VALID_ITEM_NAME)
+
+    mocker.patch('chalicelib.model.LineItem.get', return_value=line_item)
+    model.Check.save.reset_mock()
+
+    line_item = splitit.update_line_item(check, line_item.line_item_id, name='Modified %s' % VALID_ITEM_NAME)
+
+    assert VALID_ITEM_NAME != line_item.name
+
+    model.Check.save.assert_called_once()
+
+
+def test_update_line_item_location(mocker):
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+
+    default_location = check.locations[0]
+
+    location = splitit.put_location(check, VALID_LOCATION_NAME)
+
+    line_item = splitit.put_line_item(check, VALID_ITEM_NAME)
+
+    mocker.patch('chalicelib.model.LineItem.get', return_value=line_item)
+    model.Check.save.reset_mock()
+
+    line_item = splitit.update_line_item(check, line_item.line_item_id, location_id=location.location_id)
+
+    assert location.location_id == line_item.location_id
+    assert 0 == default_location.line_item_count
+    assert 1 == location.line_item_count
+
+    model.Check.save.assert_called_once()
+
+
+def test_update_line_item_to_non_existent_location(mocker):
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+
+    line_item = splitit.put_line_item(check, VALID_ITEM_NAME)
+
+    mocker.patch('chalicelib.model.LineItem.get', return_value=line_item)
+    model.Check.save.reset_mock()
+
+    with pytest.raises(KeyError, match=r'Location'):
+        splitit.update_line_item(check, line_item.line_item_id, location_id=ID)
+
+
+def test_update_line_item_add_owners(mocker):
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+
+    line_item = splitit.put_line_item(check, VALID_ITEM_NAME)
+
+    mocker.patch('chalicelib.model.LineItem.get', return_value=line_item)
+    model.Check.save.reset_mock()
+
+    line_item = splitit.update_line_item(check, line_item.line_item_id, owners_to_add=VALID_OWNERS)
+
+    assert VALID_OWNERS == line_item.owners
+
+    model.Check.save.assert_called_once()
+
+
+def test_update_line_item_add_duplicate_owner(mocker):
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+
+    line_item = splitit.put_line_item(check, VALID_ITEM_NAME, owners=VALID_OWNERS)
+
+    mocker.patch('chalicelib.model.LineItem.get', return_value=line_item)
+    model.Check.save.reset_mock()
+
+    with pytest.raises(ValueError, match=r'Duplicate owners'):
+        splitit.update_line_item(check, line_item.line_item_id, owners_to_add=[VALID_OWNERS[0]])
+
+
+def test_update_line_item_remove_owners(mocker):
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+
+    line_item = splitit.put_line_item(check, VALID_ITEM_NAME, owners=VALID_OWNERS)
+
+    mocker.patch('chalicelib.model.LineItem.get', return_value=line_item)
+    model.Check.save.reset_mock()
+
+    line_item = splitit.update_line_item(check, line_item.line_item_id, owners_to_remove=[VALID_OWNERS[0]])
+
+    assert VALID_OWNERS[1:] == line_item.owners
+
+    model.Check.save.assert_called_once()
+
+
+def test_update_line_item_amount(mocker):
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+
+    line_item = splitit.put_line_item(check, VALID_ITEM_NAME)
+
+    mocker.patch('chalicelib.model.LineItem.get', return_value=line_item)
+    model.Check.save.reset_mock()
+
+    line_item = splitit.update_line_item(check, line_item.line_item_id, amount_in_cents=VALID_AMOUNT)
+
+    assert VALID_AMOUNT == line_item.amount_in_cents
+
+    model.Check.save.assert_called_once()

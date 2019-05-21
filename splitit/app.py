@@ -108,7 +108,7 @@ def create_line_item(check_id):
     check = _get_check(check_id)
 
     try:
-        line_item = splitit.put_line_item(check, request_body.get('description'), request_body.get('locationId'),
+        line_item = splitit.put_line_item(check, request_body.get('name'), request_body.get('locationId'),
                                           request_body.get('owners'), request_body.get('amountInCents'))
     except ValueError as e:
         raise BadRequestError(e)
@@ -118,21 +118,20 @@ def create_line_item(check_id):
 
 @app.route('/check/{check_id}/line-item/{line_item_id}', methods=['PUT'])
 def update_line_item(check_id, line_item_id):
-    """
-    data = flask.request.get_json()
+    request_body = app.current_request.json_body
 
     check = _get_check(check_id)
 
-    line_item = splitit.update_line_item(check, line_item_id, data.get('name'), data.get('locationId'),
-                                         data.get('owner'), data.get('amountInCents'))
+    try:
+        line_item = splitit.update_line_item(check, line_item_id, request_body.get('name'), request_body.get('locationId'),
+                                             request_body.get('ownersToAdd'), request_body.get('ownersToRemove'),
+                                             request_body.get('amountInCents'))
+    except ValueError as e:
+        raise BadRequestError(e)
+    except KeyError as e:
+        raise NotFoundError(e)
 
-    split_ct = data.get('splitCount', 1)
-    if split_ct > 1:
-        check = splitit.split_line_item(check, line_item_id, split_ct)
-
-    return flask.jsonify(check)
-    """
-    pass
+    return line_item.to_json()
 
 
 @app.route('/check/{check_id}/line-item/{line_item_id}', methods=['DELETE'])
