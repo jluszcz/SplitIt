@@ -242,6 +242,11 @@ def _get_line_item(line_item_id):
         return None
 
 
+def _remove_line_item_from_location(check, line_item):
+    location = _get_location(check, line_item.location_id)
+    location.line_item_count -= 1
+
+
 def update_line_item(check, line_item_id, name=None, location_id=None, owners_to_add=None, owners_to_remove=None,
                      amount_in_cents=None):
 
@@ -260,9 +265,7 @@ def update_line_item(check, line_item_id, name=None, location_id=None, owners_to
         new_location = _get_location(check, location_id)
         _validate_item_exists(new_location, 'Location', location_id)
 
-        original_location_id = line_item.location_id
-        original_location = _get_location(check, original_location_id)
-        original_location.line_item_count -= 1
+        _remove_line_item_from_location(check, line_item)
 
         new_location.line_item_count += 1
         line_item.location_id = location_id
@@ -292,26 +295,16 @@ def update_line_item(check, line_item_id, name=None, location_id=None, owners_to
     return line_item
 
 
-def remove_line_item(check, line_item_id):
-    line_item = None
-
-    line_items = []
-    orig_line_items = check.get('lineItems', [])
-    for li in orig_line_items:
-        if li['id'] == line_item_id:
-            line_item = li
-            continue
-        line_items.append(li)
-
+def delete_line_item(check, line_item_id):
+    line_item = _get_line_item(line_item_id)
     if not line_item:
-        raise KeyError('No line item found for ID: %s' % line_item_id)
+        return None
 
-    if line_items:
-        check['lineItems'] = line_items
-    else:
-        check.pop('lineItems', None)
+    if line_item_id in check.line_item_ids:
+        _remove_line_item_from_location(check, line_item)
+        check.save()
 
-    check.save()
+    line_item.delete()
 
     return line_item
 

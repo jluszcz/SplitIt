@@ -136,11 +136,10 @@ def update_line_item(check_id, line_item_id):
 
 @app.route('/check/{check_id}/line-item/{line_item_id}', methods=['DELETE'])
 def remove_line_item(check_id, line_item_id):
-    """
     check = _get_check(check_id)
 
     line_item = splitit.delete_line_item(check_id, line_item_id)
 
-    return flask.jsonify(line_item)
-    """
-    pass
+    if line_item:
+        return line_item.to_json()
+    return {}

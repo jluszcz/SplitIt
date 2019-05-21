@@ -20,6 +20,7 @@ def setup_fake_ddb(mocker):
     mocker.patch('chalicelib.model.Check.save')
     mocker.patch('chalicelib.model.Check.delete')
     mocker.patch('chalicelib.model.LineItem.save')
+    mocker.patch('chalicelib.model.LineItem.delete')
 
 
 def test_get_check_no_check(mocker):
@@ -575,3 +576,46 @@ def test_update_line_item_amount(mocker):
     assert VALID_AMOUNT == line_item.amount_in_cents
 
     model.Check.save.assert_called_once()
+
+
+def test_remove_non_existent_line_item(mocker):
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+
+    mocker.patch('chalicelib.model.LineItem.get', side_effect=model.LineItem.DoesNotExist)
+
+    assert splitit.delete_line_item(check, ID) is None
+
+
+def test_remove_line_item_not_in_check(mocker):
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+
+    line_item = model.LineItem()
+
+    mocker.patch('chalicelib.model.LineItem.get', return_value=line_item)
+    model.Check.save.reset_mock()
+
+    line_item == splitit.delete_line_item(check, line_item.line_item_id)
+
+    assert line_item
+
+    model.Check.save.assert_not_called()
+    model.LineItem.delete.assert_called_once()
+
+
+def test_remove_line_item(mocker):
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+
+    line_item = splitit.put_line_item(check, VALID_ITEM_NAME)
+
+    mocker.patch('chalicelib.model.LineItem.get', return_value=line_item)
+    model.Check.save.reset_mock()
+
+    line_item == splitit.delete_line_item(check, line_item.line_item_id)
+
+    location = check.locations[0]
+
+    assert line_item
+    assert 0 == location.line_item_count
+
+    model.Check.save.assert_called_once()
+    model.LineItem.delete.assert_called_once()
