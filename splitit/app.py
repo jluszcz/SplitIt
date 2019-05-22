@@ -30,6 +30,15 @@ def get_check(check_id):
     return _get_check(check_id).to_json()
 
 
+@app.route('/check/{check_id}/summary', methods=['GET'])
+def get_check_summary(check_id):
+    check = _get_check(check_id)
+
+    summary = splitit.summarize_check(check)
+
+    return summary
+
+
 @app.route('/check/{check_id}', methods=['PUT'])
 def update_check(check_id):
     request_body = app.current_request.json_body

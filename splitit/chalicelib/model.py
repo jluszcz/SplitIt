@@ -69,13 +69,11 @@ class Check(Model):
     line_item_ids = ListAttribute(default=list)
 
     def to_json(self):
-        check_json = {
+        return {
             'checkId': self.check_id,
             'date': self.date,
             'createTimestamp': _format_timestamp(self.create_timestamp),
             'description': self.description,
+            'locations': [loc.to_json() for loc in self.locations],
+            'lineItemIds': self.line_item_ids
         }
-
-        check_json['locations'] = [loc.to_json() for loc in self.locations]
-
-        return check_json

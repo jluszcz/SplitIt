@@ -5,7 +5,7 @@ from chalicelib.model import Check, Location, LineItem
 
 _DATE_RE = re.compile(r'^\d{4}-\d{2}-\d{2}$')
 
-_DEFAULT_QUERY_LIMIT = 25
+LocationTaxAndTip = collections.namedtuple('LocationTaxAndTip', ['tax_multiplier', 'tip_multiplier'])
 
 
 class ConflictError(Exception):
@@ -256,6 +256,7 @@ def update_line_item(check, line_item_id, name=None, location_id=None, owners_to
     _validate_item_exists(line_item, 'Line Item', line_item_id)
 
     modified = False
+    modified_check = False
 
     if name:
         line_item.name = name
@@ -271,6 +272,7 @@ def update_line_item(check, line_item_id, name=None, location_id=None, owners_to
         line_item.location_id = location_id
 
         modified = True
+        modified_check = True
 
     if owners_to_add:
         orig_owner_ct = len(line_item.owners)
@@ -290,6 +292,9 @@ def update_line_item(check, line_item_id, name=None, location_id=None, owners_to
         modified = True
 
     if modified:
+        line_item.save()
+
+    if modified_check:
         check.save()
 
     return line_item
@@ -309,25 +314,40 @@ def delete_line_item(check, line_item_id):
     return line_item
 
 
-def group_check_by_owner(check):
+def summarize_check(check):
+    line_items = list(LineItem.batch_get(check.line_item_ids))
+
     locations_by_id = {}
-    for location in check['locations']:
-        locations_by_id[location['id']] = location
+    location_tax_and_tip_by_id = {}
+
+    for location in check.locations:
+        locations_by_id[location.location_id] = location
 
         loc_total = 0
 
-        for line_item in check['lineItems']:
-            if location['id'] == line_item['locationId']:
-                loc_total += line_item['amountInCents']
+        for line_item in line_items:
+            if location.location_id == line_item.location_id:
+                loc_total += line_item.amount_in_cents
 
-        location['tipMultiplier'] = float(location.get('tipInCents', 0)) / loc_total
-        location['taxMultiplier'] = float(location.get('taxInCents', 0)) / loc_total
+        tax_multiplier = float(location.tax_in_cents) / loc_total
+        tip_multiplier = float(location.tip_in_cents) / loc_total
+
+        location_tax_and_tip_by_id[location.location_id] = LocationTaxAndTip(tax_multiplier, tip_multiplier)
 
     by_owner = collections.Counter()
 
-    for line_item in check['lineItems']:
-        location = locations_by_id[line_item['locationId']]
-        by_owner[line_item['owner']] += int(round((1 + location['tipMultiplier'] + location['taxMultiplier'])
-                                                  * line_item['amountInCents']))
+    for line_item in line_items:
+        location = locations_by_id[line_item.location_id]
+        location_tax_and_tip = location_tax_and_tip_by_id[line_item.location_id]
 
-    return by_owner
+        for owner in line_item.owners:
+            adjusted_amount = int(round((1 + location_tax_and_tip.tax_multiplier + location_tax_and_tip.tip_multiplier)
+                                        * (line_item.amount_in_cents / len(line_item.owners))))
+            by_owner[owner] += adjusted_amount
+
+    return {
+        'check': check.description,
+        'checkDate': check.date,
+        'locations': [location.name for location in check.locations],
+        'amountInCentsByOwner': by_owner,
+    }

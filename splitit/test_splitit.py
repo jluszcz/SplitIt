@@ -467,11 +467,11 @@ def test_update_line_item_no_changes(mocker):
     line_item = splitit.put_line_item(check, VALID_ITEM_NAME)
 
     mocker.patch('chalicelib.model.LineItem.get', return_value=line_item)
-    model.Check.save.reset_mock()
+    model.LineItem.save.reset_mock()
 
     line_item = splitit.update_line_item(check, line_item.line_item_id)
 
-    model.Check.save.assert_not_called()
+    model.LineItem.save.assert_not_called()
 
 
 def test_update_line_item_name(mocker):
@@ -479,13 +479,13 @@ def test_update_line_item_name(mocker):
     line_item = splitit.put_line_item(check, VALID_ITEM_NAME)
 
     mocker.patch('chalicelib.model.LineItem.get', return_value=line_item)
-    model.Check.save.reset_mock()
+    model.LineItem.save.reset_mock()
 
     line_item = splitit.update_line_item(check, line_item.line_item_id, name='Modified %s' % VALID_ITEM_NAME)
 
     assert VALID_ITEM_NAME != line_item.name
 
-    model.Check.save.assert_called_once()
+    model.LineItem.save.assert_called_once()
 
 
 def test_update_line_item_location(mocker):
@@ -499,6 +499,7 @@ def test_update_line_item_location(mocker):
 
     mocker.patch('chalicelib.model.LineItem.get', return_value=line_item)
     model.Check.save.reset_mock()
+    model.LineItem.save.reset_mock()
 
     line_item = splitit.update_line_item(check, line_item.line_item_id, location_id=location.location_id)
 
@@ -507,6 +508,7 @@ def test_update_line_item_location(mocker):
     assert 1 == location.line_item_count
 
     model.Check.save.assert_called_once()
+    model.LineItem.save.assert_called_once()
 
 
 def test_update_line_item_to_non_existent_location(mocker):
@@ -515,7 +517,6 @@ def test_update_line_item_to_non_existent_location(mocker):
     line_item = splitit.put_line_item(check, VALID_ITEM_NAME)
 
     mocker.patch('chalicelib.model.LineItem.get', return_value=line_item)
-    model.Check.save.reset_mock()
 
     with pytest.raises(KeyError, match=r'Location'):
         splitit.update_line_item(check, line_item.line_item_id, location_id=ID)
@@ -527,13 +528,13 @@ def test_update_line_item_add_owners(mocker):
     line_item = splitit.put_line_item(check, VALID_ITEM_NAME)
 
     mocker.patch('chalicelib.model.LineItem.get', return_value=line_item)
-    model.Check.save.reset_mock()
+    model.LineItem.save.reset_mock()
 
     line_item = splitit.update_line_item(check, line_item.line_item_id, owners_to_add=VALID_OWNERS)
 
     assert VALID_OWNERS == line_item.owners
 
-    model.Check.save.assert_called_once()
+    model.LineItem.save.assert_called_once()
 
 
 def test_update_line_item_add_duplicate_owner(mocker):
@@ -542,7 +543,7 @@ def test_update_line_item_add_duplicate_owner(mocker):
     line_item = splitit.put_line_item(check, VALID_ITEM_NAME, owners=VALID_OWNERS)
 
     mocker.patch('chalicelib.model.LineItem.get', return_value=line_item)
-    model.Check.save.reset_mock()
+    model.LineItem.save.reset_mock()
 
     with pytest.raises(ValueError, match=r'Duplicate owners'):
         splitit.update_line_item(check, line_item.line_item_id, owners_to_add=[VALID_OWNERS[0]])
@@ -554,13 +555,13 @@ def test_update_line_item_remove_owners(mocker):
     line_item = splitit.put_line_item(check, VALID_ITEM_NAME, owners=VALID_OWNERS)
 
     mocker.patch('chalicelib.model.LineItem.get', return_value=line_item)
-    model.Check.save.reset_mock()
+    model.LineItem.save.reset_mock()
 
     line_item = splitit.update_line_item(check, line_item.line_item_id, owners_to_remove=[VALID_OWNERS[0]])
 
     assert VALID_OWNERS[1:] == line_item.owners
 
-    model.Check.save.assert_called_once()
+    model.LineItem.save.assert_called_once()
 
 
 def test_update_line_item_amount(mocker):
@@ -569,13 +570,13 @@ def test_update_line_item_amount(mocker):
     line_item = splitit.put_line_item(check, VALID_ITEM_NAME)
 
     mocker.patch('chalicelib.model.LineItem.get', return_value=line_item)
-    model.Check.save.reset_mock()
+    model.LineItem.save.reset_mock()
 
     line_item = splitit.update_line_item(check, line_item.line_item_id, amount_in_cents=VALID_AMOUNT)
 
     assert VALID_AMOUNT == line_item.amount_in_cents
 
-    model.Check.save.assert_called_once()
+    model.LineItem.save.assert_called_once()
 
 
 def test_remove_non_existent_line_item(mocker):

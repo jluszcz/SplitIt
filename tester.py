@@ -71,7 +71,7 @@ def remove_location(args):
 
 def add_line_item(args):
     data = {
-        'description': args.description,
+        'name': args.name,
     }
 
     if args.owners:
@@ -84,6 +84,31 @@ def add_line_item(args):
         data['amountInCents'] = args.amount_in_cents
 
     return requests.post('%s/check/%s/line-item' % (ENDPOINT, args.check_id), json=data)
+
+
+def get_line_item(args):
+    return requests.get('%s/check/%s/line-item/%s' % (ENDPOINT, args.check_id, args.line_item_id))
+
+
+def update_line_item(args):
+    data = {}
+
+    if args.name:
+        data['name'] = args.name
+
+    if args.owners_to_add:
+        data['ownersToAdd'] = args.owners_to_add
+
+    if args.owners_to_remove:
+        data['ownersToRemove'] = args.owners_to_remove
+
+    if args.location_id:
+        data['locationId'] = args.location_id
+
+    if args.amount_in_cents is not None:
+        data['amountInCents'] = args.amount_in_cents
+
+    return requests.put('%s/check/%s/line-item/%s' % (ENDPOINT, args.check_id, args.line_item_id), json=data)
 
 
 def parse_args():
@@ -131,11 +156,26 @@ def parse_args():
 
     add_line_item_subparser = subparsers.add_parser('add-line-item')
     add_line_item_subparser.add_argument('--check-id', required=True)
-    add_line_item_subparser.add_argument('--description', required=True)
+    add_line_item_subparser.add_argument('--name', required=True)
     add_line_item_subparser.add_argument('--location-id')
     add_line_item_subparser.add_argument('--owners', nargs='+')
     add_line_item_subparser.add_argument('--amount-in-cents', type=int)
     add_line_item_subparser.set_defaults(func=add_line_item)
+
+    get_line_item_subparser = subparsers.add_parser('get-line-item')
+    get_line_item_subparser.add_argument('--check-id', required=True)
+    get_line_item_subparser.add_argument('--line-item-id', required=True)
+    get_line_item_subparser.set_defaults(func=get_line_item)
+
+    update_line_item_subparser = subparsers.add_parser('update-line-item')
+    update_line_item_subparser.add_argument('--check-id', required=True)
+    update_line_item_subparser.add_argument('--line-item-id', required=True)
+    update_line_item_subparser.add_argument('--name')
+    update_line_item_subparser.add_argument('--location-id')
+    update_line_item_subparser.add_argument('--owners-to-add', nargs='*')
+    update_line_item_subparser.add_argument('--owners-to-remove', nargs='*')
+    update_line_item_subparser.add_argument('--amount-in-cents', type=int)
+    update_line_item_subparser.set_defaults(func=update_line_item)
 
     return parser.parse_args()
 
