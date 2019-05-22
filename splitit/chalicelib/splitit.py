@@ -1,4 +1,5 @@
 import collections
+import logging
 import re
 
 from chalicelib.model import Check, Location, LineItem
@@ -329,10 +330,13 @@ def summarize_check(check):
             if location.location_id == line_item.location_id:
                 loc_total += line_item.amount_in_cents
 
-        tax_multiplier = float(location.tax_in_cents) / loc_total
-        tip_multiplier = float(location.tip_in_cents) / loc_total
+        tax_multiplier = float(location.tax_in_cents) / loc_total if loc_total else 0
+        tip_multiplier = float(location.tip_in_cents) / loc_total if loc_total else 0
 
         location_tax_and_tip_by_id[location.location_id] = LocationTaxAndTip(tax_multiplier, tip_multiplier)
+
+        logging.debug('Location "%s" (%s), total=%d, tax multiplier=%.2f, tip multiplier=%.2f',
+                      location.name, location.location_id, loc_total, tax_multiplier, tip_multiplier)
 
     by_owner = collections.Counter()
 
@@ -346,8 +350,8 @@ def summarize_check(check):
             by_owner[owner] += adjusted_amount
 
     return {
-        'check': check.description,
-        'checkDate': check.date,
+        'description': check.description,
+        'date': check.date,
         'locations': [location.name for location in check.locations],
         'amountInCentsByOwner': by_owner,
     }

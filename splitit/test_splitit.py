@@ -620,3 +620,56 @@ def test_remove_line_item(mocker):
 
     model.Check.save.assert_called_once()
     model.LineItem.delete.assert_called_once()
+
+
+def test_summarize_check_no_line_items(mocker):
+    mocker.patch('chalicelib.model.LineItem.batch_get', return_value=[])
+
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+    splitit.put_location(check, location_name=VALID_LOCATION_NAME)
+
+    summary = splitit.summarize_check(check)
+
+    assert check.description == summary['description']
+    assert check.date == summary['date']
+    assert 2 == len(summary['locations'])
+    assert not summary['amountInCentsByOwner']
+
+
+def _create_line_item(location_id, owners, amount_in_cents):
+    line_item = model.LineItem()
+    line_item.name = VALID_ITEM_NAME
+    line_item.location_id = location_id
+    line_item.owners = owners
+    line_item.amount_in_cents = amount_in_cents
+    return line_item
+
+
+def test_summarize_check(mocker):
+    check = splitit.put_check(date=VALID_DATE, description=VALID_DESC)
+    default_location_id = check.locations[0].location_id
+
+    splitit.update_location(check, default_location_id, tax_in_cents=500, tip_in_cents=1000)
+
+    location = splitit.put_location(check, location_name=VALID_LOCATION_NAME)
+    location_id = location.location_id
+    splitit.update_location(check, location_id, tax_in_cents=1500, tip_in_cents=2000)
+
+    line_items = [
+        _create_line_item(default_location_id, ['Foo', 'Bar', 'Baz'], 3000),
+        _create_line_item(location_id, ['Foo'], 500),
+        _create_line_item(location_id, ['Bar'], 1500),
+        _create_line_item(location_id, ['Baz'], 1000),
+        _create_line_item(location_id, ['Baz'], 2000),
+    ]
+
+    mocker.patch('chalicelib.model.LineItem.batch_get', return_value=line_items)
+
+    summary = splitit.summarize_check(check)
+
+    assert check.description == summary['description']
+    assert check.date == summary['date']
+    assert 2 == len(summary['locations'])
+    assert 2350 == summary['amountInCentsByOwner']['Foo']
+    assert 4050 == summary['amountInCentsByOwner']['Bar']
+    assert 6600 == summary['amountInCentsByOwner']['Baz']
